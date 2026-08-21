@@ -1,4 +1,7 @@
-import { AssetRepresentation } from "../types";
+import {
+    AssetRepresentation,
+    ExternalTransaction
+} from "../types.ts";
 import { TokenAdapter } from "./tokenAdapter";
 
 
@@ -6,6 +9,7 @@ import { TokenAdapter } from "./tokenAdapter";
 export class MockTokenAdapter implements TokenAdapter {
 
     private balances = new Map<string, number>();
+    private transactions = new Map<string, ExternalTransaction>();
 
     async getBalance(
         representation: AssetRepresentation,
@@ -43,6 +47,37 @@ export class MockTokenAdapter implements TokenAdapter {
             (this.balances.get(toKey) ?? 0) + quantity
         );
 
-        return `mock_tx_${crypto.randomUUID()}`;
+        const externalId = `mock_tx_${crypto.randomUUID()}`;
+
+        this.transactions.set(externalId, {
+            id: externalId,
+            externalId,
+            status: "confirmed",
+            movements: [
+                {
+                    from,
+                    to,
+                    representation: representation.id,
+                    quantity
+                }
+            ],
+            observedAt: new Date().toISOString()
+        });
+
+        return externalId;
+    }
+
+    async getTransaction(
+        representation: AssetRepresentation,
+        externalId: string
+    ): Promise<ExternalTransaction> {
+
+        const transaction = this.transactions.get(externalId);
+
+        if (!transaction) {
+            throw new Error("External transaction not found");
+        }
+
+        return transaction;
     }
 }
