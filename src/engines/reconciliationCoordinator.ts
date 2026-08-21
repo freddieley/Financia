@@ -1,28 +1,33 @@
 import type {
     Transaction,
-    ExternalTransaction,
+    ExternalSettlement,
     AssetRepresentation,
     Reconciliation
 } from "../types.ts";
 
 import {
-    reconcileTransaction
+    reconcileSettlement
 } from "./reconciliationEngine.ts";
 
 
 export type ReconciliationBatchResult = {
-    status: "matched" | "mismatched" | "unresolved" | "partial";
+    status:
+        | "matched"
+        | "mismatched"
+        | "unresolved"
+        | "partial";
+
     reconciliations: Reconciliation[];
 };
 
 
-export function reconcileSettlement(
+export function reconcileSettlements(
     transaction: Transaction,
-    externalTransactions: ExternalTransaction[],
+    settlements: ExternalSettlement[],
     representations: AssetRepresentation[]
 ): ReconciliationBatchResult {
 
-    if (externalTransactions.length === 0) {
+    if (settlements.length === 0) {
         return {
             status: "unresolved",
             reconciliations: []
@@ -31,35 +36,35 @@ export function reconcileSettlement(
 
     const reconciliations: Reconciliation[] = [];
 
-    for (const externalTransaction of externalTransactions) {
+    for (const settlement of settlements) {
 
-        const reconciliation = reconcileTransaction(
+        const reconciliation = reconcileSettlement(
             transaction,
-            externalTransaction,
+            settlement,
             representations
         );
 
         reconciliations.push(reconciliation);
     }
 
-    if (
-        reconciliations.some(
-            reconciliation =>
-                reconciliation.status === "mismatched"
-        )
-    ) {
+    const hasMismatch = reconciliations.some(
+        reconciliation =>
+            reconciliation.status === "mismatched"
+    );
+
+    if (hasMismatch) {
         return {
             status: "mismatched",
             reconciliations
         };
     }
 
-    if (
-        reconciliations.some(
-            reconciliation =>
-                reconciliation.status === "unresolved"
-        )
-    ) {
+    const hasUnresolved = reconciliations.some(
+        reconciliation =>
+            reconciliation.status === "unresolved"
+    );
+
+    if (hasUnresolved) {
         return {
             status: "unresolved",
             reconciliations
@@ -67,7 +72,7 @@ export function reconcileSettlement(
     }
 
     if (
-        reconciliations.length <
+        settlements.length <
         transaction.movements.length
     ) {
         return {
