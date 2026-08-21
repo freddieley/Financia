@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
-import {
+
+import type {
     Agent,
     Asset,
     Position,
@@ -7,9 +8,11 @@ import {
     Policy,
     Intent,
     Transaction
-} from "../types.ts"
+} from "../types.ts";
+
 import { hasPermission } from "./permissionEngine.ts";
 import { evaluatePolicy } from "./policyEngine.ts";
+
 import {
     findPosition,
     hasSufficientQuantity
@@ -22,6 +25,7 @@ export type TransactionEngineResult = {
     requiresApproval?: boolean;
     error?: string;
 };
+
 
 export function createTransaction(
     intent: Intent,
@@ -56,7 +60,7 @@ export function createTransaction(
         };
     }
 
-    if (hasSufficientQuantity(
+    if (!hasSufficientQuantity(
         sourcePosition,
         intent.quantity
     )) {
@@ -93,12 +97,25 @@ export function createTransaction(
 
     const transaction: Transaction = {
         id: `transaction_${randomUUID()}`,
-        type: "transfer",
-        from: intent.from,
-        to: intent.to,
-        asset: intent.asset,
-        quantity: intent.quantity,
+
+        type:
+            intent.type === "transfer"
+                ? "transfer"
+                : intent.type === "purchase"
+                    ? "purchase"
+                    : "exchange",
+
+        movements: [
+            {
+                from: intent.from,
+                to: intent.to,
+                asset: intent.asset,
+                quantity: intent.quantity
+            }
+        ],
+
         status: "pending",
+
         createdAt: new Date().toISOString()
     };
 

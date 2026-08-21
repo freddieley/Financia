@@ -1,133 +1,116 @@
 import { randomUUID } from "crypto";
-
 import type {
-    Agent,
-    Asset,
     Position,
-    Permission,
-    Policy,
-    Intent,
-    Transaction
+    Transaction,
+    Settlement,
+    LedgerEntry
 } from "../types.ts";
-
-import { hasPermission } from "./permissionEngine.ts";
-import { evaluatePolicy } from "./policyEngine.ts";
-import {
-    findPosition,
-    hasSufficientQuantity
-} from "./positionEngine.ts";
+import { recordTransferMovement } from "./ledgerEngine.ts";
+import { accounts, assets, ledger } from "../store/memoryStore.ts";
+import { findPosition, hasSufficientQuantity } from "./positionEngine.ts";
 
 
-export type TransactionEngineResult = {
+export type SettlementResult = {
     success: boolean;
-    transaction?: Transaction;
-    requiresApproval?: boolean;
+    settlement?: Settlement;
     error?: string;
 };
 
-
-export function createTransaction(
-    intent: Intent,
-    agent: Agent,
-    assets: Asset[],
+export function settleTransaction(
+    transaction: Transaction,
     positions: Position[],
-    permissions: Permission[],
-    policies: Policy[]
-): TransactionEngineResult {
+    ledger: LedgerEntry[]
+): SettlementResult {
 
-    const asset = assets.find(
-        asset => asset.id === intent.asset
-    );
-
-    if (!asset) {
+    if (transaction.status !== "pending") {
         return {
             success: false,
-            error: "Asset not found"
+            error: "Transaction is not pending"
         };
     }
 
-    const sourcePosition = findPosition(
-        intent.from,
-        intent.asset,
-        positions
-    );
+    // validate
+    for (const movement of transaction.movements) {
 
-    if (!sourcePosition) {
-        return {
-            success: false,
-            error: "Source account does not own this asset"
-        };
-    }
+        const sourcePosition = findPosition(
+            movement.from,
+            movement.asset,
+            positions
+        );
 
-    if (
-        !hasSufficientQuantity(
+        if (!sourcePosition) {
+            transaction.status = "failed";
+
+            return {
+                success: false,
+                error: "Source position not found"
+            };
+        }
+
+        if (!hasSufficientQuantity(
             sourcePosition,
-            intent.quantity
-        )
-    ) {
-        return {
-            success: false,
-            error: "Insufficient asset quantity"
-        };
+            movement.quantity
+        )) {
+            transaction.status = "failed";
+
+            return {
+                success: false,
+                error: "Insufficient quantity"
+            };
+        }
     }
 
-    if (
-        !hasPermission(
-            intent.agent,
-            intent.type,
-            intent.asset,
-            permissions
-        )
-    ) {
-        return {
-            success: false,
-            error:
-                "Agent does not have permission to transfer this asset"
-        };
+    // apply
+    for (const movement of transaction.movements) {
+
+        const sourcePosition = findPosition(
+            movement.from,
+            movement.asset,
+            positions
+        );
+
+        let destinationPosition = findPosition(
+            movement.to,
+            movement.asset,
+            positions
+        );
+
+        if (!destinationPosition) {
+            destinationPosition = {
+                id: `position_${randomUUID()}`,
+                account: movement.to,
+                asset: movement.asset,
+                quantity: 0
+            };
+
+            positions.push(destinationPosition);
+        }
+
+        sourcePosition.quantity -= movement.quantity;   // already validated above
+        destinationPosition.quantity += movement.quantity;
     }
 
-    const policyResult = evaluatePolicy(
-        agent,
-        intent,
-        policies
-    );
-
-    if (!policyResult.allowed) {
-        return {
-            success: false,
-            error: policyResult.reason
-        };
+    // record
+    for (const movement of transaction.movements) {
+        recordTransferMovement(
+            transaction,
+            movement,
+            ledger
+        );
     }
 
-    const transaction: Transaction = {
-        id: `transaction_${randomUUID()}`,
+    transaction.status = "settled";
+    transaction.settledAt = new Date().toISOString();
 
-        type:
-            intent.type === "transfer"
-                ? "transfer"
-                : intent.type === "purchase"
-                    ? "purchase"
-                    : "exchange",
-
-        movements: [
-            {
-                from: intent.from,
-                to: intent.to,
-                asset: intent.asset,
-                quantity: intent.quantity
-            }
-        ],
-
-        status: "pending",
-
-        createdAt:
-            new Date().toISOString()
+    const settlement: Settlement = {
+        id: `settlement_${randomUUID()}`,
+        transactionId: transaction.id,
+        status: "settled",
+        timestamp: new Date().toISOString()
     };
 
     return {
         success: true,
-        transaction,
-        requiresApproval:
-            policyResult.requiresApproval
+        settlement
     };
 }
