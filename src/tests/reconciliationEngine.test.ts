@@ -160,7 +160,7 @@ describe("reconcileTransaction", () => {
             []
         );
 
-        expect(result.status).toBe("mismatched");
+        expect(result.status).toBe("unresolved");
     });
 
     it("matches a multi-movement transaction", () => {
