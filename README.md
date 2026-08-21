@@ -18,6 +18,15 @@
 
 
 ```
+Asset
+  │
+  ├── Position
+  │
+  └── AssetRepresentation
+          │
+          └── external identifier
+```
+```
 Internal Transaction
         │
         └── movements[]

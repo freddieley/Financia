@@ -26,3 +26,23 @@ export function createRepresentation(
 
     return representation;
 }
+
+export function findRepresentationForAsset(
+    assetId: string,
+    representations: AssetRepresentation[]
+): AssetRepresentation[] {
+    
+    return representations.filter(
+        representation => representation.asset === assetId
+    );
+}
+
+export function findRepresentation(
+    representationId: string,
+    representations: AssetRepresentation[]
+): AssetRepresentation | undefined {
+
+    return representations.find(
+        representation => representation.id === representationId
+    );
+}
