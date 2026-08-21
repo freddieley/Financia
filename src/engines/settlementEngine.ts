@@ -39,8 +39,6 @@ export function settleTransaction(
         );
 
         if (!sourcePosition) {
-            transaction.status = "failed";
-
             return {
                 success: false,
                 error: "Source position not found"
@@ -51,8 +49,6 @@ export function settleTransaction(
             sourcePosition,
             movement.quantity
         )) {
-            transaction.status = "failed";
-
             return {
                 success: false,
                 error: "Insufficient quantity"
