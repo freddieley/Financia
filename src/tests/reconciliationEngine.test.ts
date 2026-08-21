@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-    reconcileTransaction
+    reconcileTransaction,
+    reconcileSettlement
 } from "../engines/reconciliationEngine.ts";
 
 import {
@@ -11,7 +12,8 @@ import {
 import type {
     Asset,
     Transaction,
-    ExternalTransaction
+    ExternalTransaction,
+    ExternalSettlement
 } from "../types.ts";
 
 
@@ -246,6 +248,69 @@ describe("reconcileTransaction", () => {
         );
 
         expect(result.status).toBe("matched");
+    });
+
+    it("reconciles an individual external settlement", () => {
+
+        const asset: Asset = {
+            id: "bond_001",
+            type: "bond",
+            issuer: "issuer_001",
+            quantity: 100,
+            metadata: {}
+        };
+
+        const representation = createRepresentation(
+            asset,
+            "token",
+            "mock"
+        );
+
+        const transaction: Transaction = {
+            id: "tx_001",
+            type: "transfer",
+            movements: [
+                {
+                    from: "account_A",
+                    to: "account_B",
+                    asset: asset.id,
+                    quantity: 100
+                }
+            ],
+            status: "pending",
+            createdAt: new Date().toISOString()
+        };
+
+        const externalTransaction: ExternalTransaction = {
+            id: "external_001",
+            externalId: "mock_001",
+            status: "confirmed",
+            movements: [
+                {
+                    from: "account_A",
+                    to: "account_B",
+                    representation: representation.id,
+                    quantity: 100
+                }
+            ],
+            observedAt: new Date().toISOString()
+        };
+
+        const settlement: ExternalSettlement = {
+            movement: transaction.movements[0],
+            externalTransaction
+        };
+
+        const result = reconcileSettlement(
+            transaction,
+            settlement,
+            [representation]
+        );
+
+        expect(result.status).toBe("matched");
+        expect(result.transactionId).toBe(transaction.id);
+        expect(result.externalTransactionId)
+            .toBe(externalTransaction.externalId);
     });
 
 });

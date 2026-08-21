@@ -3,7 +3,8 @@ import type {
     Transaction,
     ExternalTransaction,
     Reconciliation,
-    AssetRepresentation
+    AssetRepresentation,
+    ExternalSettlement
 } from "../types.ts";
 
 
@@ -116,6 +117,62 @@ export function reconcileTransaction(
                 reason: result.reason
             };
         }
+    }
+
+    return {
+        ...reconciliationBase,
+        status: "matched"
+    };
+}
+
+export function reconcileSettlement(
+    transaction: Transaction,
+    settlement: ExternalSettlement,
+    representations: AssetRepresentation[]
+): Reconciliation {
+
+    const movement = settlement.movement;
+    const externalTransaction = settlement.externalTransaction;
+
+    const reconciliationBase = {
+        id: `reconciliation_${randomUUID()}`,
+        transactionId: transaction.id,
+        externalTransactionId: externalTransaction.externalId,
+        timestamp: new Date().toISOString()
+    };
+
+    const assetRepresentations = representations.filter(
+        representation =>
+            representation.asset === movement.asset
+    );
+
+    if (assetRepresentations.length === 0) {
+        return {
+            ...reconciliationBase,
+            status: "unresolved",
+            reason:
+                `No representation found for asset ${movement.asset}`
+        };
+    }
+
+    const matched = externalTransaction.movements.some(
+        externalMovement =>
+            externalMovement.from === movement.from &&
+            externalMovement.to === movement.to &&
+            externalMovement.quantity === movement.quantity &&
+            assetRepresentations.some(
+                representation =>
+                    externalMovement.representation === representation.id
+            )
+    );
+
+    if (!matched) {
+        return {
+            ...reconciliationBase,
+            status: "mismatched",
+            reason:
+                `Movement for asset ${movement.asset} does not match external settlement`
+        };
     }
 
     return {
