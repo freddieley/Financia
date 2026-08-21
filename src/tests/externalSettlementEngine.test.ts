@@ -67,10 +67,10 @@ describe("settleExternally", () => {
 
         expect(result.success).toBe(true);
         expect(result.status).toBe("settled");
-        expect(result.externalTransactions).toHaveLength(1);
+        expect(result.settlements).toHaveLength(1);
 
         const externalTransaction =
-            result.externalTransactions[0];
+            result.settlements[0].externalTransaction;
 
         expect(externalTransaction.status)
             .toBe("confirmed");
@@ -255,11 +255,11 @@ describe("settleExternally", () => {
         expect(result.status).toBe("partial");
 
         expect(
-            result.externalTransactions
+            result.settlements
         ).toHaveLength(1);
 
         expect(
-            result.externalTransactions[0].status
+            result.settlements[0].externalTransaction.status
         ).toBe("confirmed");
     });
 
