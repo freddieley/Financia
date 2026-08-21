@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "dev": "node src/server.ts"
+    "dev": "node src/server.ts",
+    "test": "vitest"
   },
   "dependencies": {
     "body-parser": "^2.3.0",

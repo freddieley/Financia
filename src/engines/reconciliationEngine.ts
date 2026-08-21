@@ -17,7 +17,7 @@ type MovementMatchResult =
     }
     | {
         status: "unresolved";
-        reason: string
+        reason: string;
     };
 
 
@@ -75,6 +75,22 @@ export function reconcileTransaction(
         timestamp: new Date().toISOString()
     };
 
+    for (const movement of transaction.movements) {
+
+        const assetRepresentations = representations.filter(
+            representation =>
+                representation.asset === movement.asset
+        );
+
+        if (assetRepresentations.length === 0) {
+            return {
+                ...reconciliationBase,
+                status: "unresolved",
+                reason: `No representation found for asset ${movement.asset}`
+            };
+        }
+    }
+
     if (
         transaction.movements.length !== externalTransaction.movements.length
     ) {
@@ -93,7 +109,7 @@ export function reconcileTransaction(
             representations
         );
 
-        if (result.status != "matched") {
+        if (result.status !== "matched") {
             return {
                 ...reconciliationBase,
                 status: result.status,
