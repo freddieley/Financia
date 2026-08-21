@@ -53,6 +53,12 @@ describe("settleExternally", () => {
 
         const adapter = new MockTokenAdapter();
 
+        adapter.setBalance(
+            "account_A",
+            representation.id,
+            100
+        );
+
         const result = await settleExternally(
             transaction,
             [representation],

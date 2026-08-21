@@ -17,7 +17,7 @@ export class MockTokenAdapter implements TokenAdapter {
         quantity: number
     ): void {
         this.balances.set(
-            `${accountId}:${representationId}`,
+            `${representationId}:${accountId}`,
             quantity
         );
     }
