@@ -2,23 +2,13 @@ import type {
     Transaction,
     ExternalSettlement,
     AssetRepresentation,
-    Reconciliation
+    Reconciliation,
+    ReconciliationBatchResult
 } from "../types.ts";
 
 import {
     reconcileSettlement
 } from "./reconciliationEngine.ts";
-
-
-export type ReconciliationBatchResult = {
-    status:
-        | "matched"
-        | "mismatched"
-        | "unresolved"
-        | "partial";
-
-    reconciliations: Reconciliation[];
-};
 
 
 export function reconcileSettlements(

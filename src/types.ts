@@ -70,6 +70,15 @@ export type Reconciliation = {
     reason?: string;
 };
 
+export type ReconciliationBatchResult = {
+    status:
+        | "matched"
+        | "mismatched"
+        | "unresolved"
+        | "partial";
+    reconciliations: Reconciliation[];
+};
+
 export type Settlement = {
     id: string;
     transactionId: string;
