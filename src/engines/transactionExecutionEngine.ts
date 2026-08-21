@@ -51,6 +51,7 @@ export function executeTransaction(
     representations: AssetRepresentation[]
 ): TransactionExecutionResult {
 
+    // 1. Create the transaction from the intent.
     const transactionResult =
         createTransaction(
             intent,
@@ -71,6 +72,8 @@ export function executeTransaction(
     const transaction =
         transactionResult.transaction!;
 
+
+    // 2. Execute the transaction internally.
     const settlementResult =
         settleTransaction(
             transaction,
@@ -89,16 +92,19 @@ export function executeTransaction(
     const settlement =
         settlementResult.settlement!;
 
-    const settlements: ExternalSettlement[] =
-        externalSettlements;
 
+    // 3. Reconcile against externally observed
+    //    settlement evidence.
     const reconciliation =
         reconcileSettlements(
             transaction,
-            settlements,
+            externalSettlements,
             representations
         );
 
+
+    // 4. Let the lifecycle engine decide
+    //    the transaction's final state.
     const lifecycleResult =
         applySettlementResult(
             transaction,
