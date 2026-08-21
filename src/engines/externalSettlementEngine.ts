@@ -1,5 +1,6 @@
 import type {
     AssetRepresentation,
+    ExternalSettlement,
     ExternalTransaction,
     Transaction
 } from "../types.ts";
@@ -12,7 +13,7 @@ import {
 export type ExternalSettlementResult = {
     success: boolean;
     status: "settled" | "failed" | "partial" | "unresolved";
-    externalTransactions: ExternalTransaction[];
+    settlements: ExternalSettlement[];
     error?: string;
 };
 
@@ -26,12 +27,12 @@ export async function settleExternally(
         return {
             success: false,
             status: "failed",
-            externalTransactions: [],
+            settlements: [],
             error: "Transaction is not pending"
         };
     }
 
-    const externalTransactions: ExternalTransaction[] = [];
+    const settlements: ExternalSettlement[] = [];
 
     for (const movement of transaction.movements) {
 
@@ -45,10 +46,10 @@ export async function settleExternally(
             return {
                 success: false,
                 status:
-                    externalTransactions.length > 0
+                    settlements.length > 0
                         ? "partial"
                         : "unresolved",
-                externalTransactions,
+                settlements,
                 error:
                     `No representation found for asset ${movement.asset}`
             };
@@ -58,10 +59,10 @@ export async function settleExternally(
             return {
                 success: false,
                 status:
-                    externalTransactions.length > 0
+                    settlements.length > 0
                         ? "partial"
                         : "unresolved",
-                externalTransactions,
+                settlements,
                 error:
                     `Multiple representations found for asset ${movement.asset}`
             };
@@ -85,19 +86,20 @@ export async function settleExternally(
                     externalId
                 );
 
-            externalTransactions.push(
+            settlements.push({
+                movement,
                 externalTransaction
-            );
+            });
 
         } catch (error) {
 
             return {
                 success: false,
                 status:
-                    externalTransactions.length > 0
+                    settlements.length > 0
                         ? "partial"
                         : "failed",
-                externalTransactions,
+                settlements,
                 error:
                     error instanceof Error
                         ? error.message
@@ -109,6 +111,6 @@ export async function settleExternally(
     return {
         success: true,
         status: "settled",
-        externalTransactions
+        settlements
     };
 }

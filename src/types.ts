@@ -77,6 +77,11 @@ export type Settlement = {
     timestamp: string;
 };
 
+export type ExternalSettlement = {
+    movement: Movement;
+    externalTransaction: ExternalTransaction;
+};
+
 type Quantity = {
     value: number;
     unit: string;
