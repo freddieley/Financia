@@ -5,32 +5,61 @@ import type {
     Reconciliation,
     AssetRepresentation
 } from "../types.ts";
-import {
-    findRepresentation
-} from "./representationEngine.ts";
 
 
-function movementMatches(
+type MovementMatchResult =
+    | {
+        status: "matched";
+    }
+    | {
+        status: "mismatched";
+        reason: string;
+    }
+    | {
+        status: "unresolved";
+        reason: string
+    };
+
+
+function matchMovement(
     movement: Transaction["movements"][number],
-    ExternalTransaction: ExternalTransaction,
+    externalTransaction: ExternalTransaction,
     representations: AssetRepresentation[]
-): boolean {
+): MovementMatchResult {
 
-    const representation = representations.find(
+    const assetRepresentations = representations.filter(
         representation => representation.asset === movement.asset
     );
 
-    if (!representation) {
-        return false;
+    if (assetRepresentations.length === 0) {
+        return {
+            status: "unresolved",
+            reason: `No representation found for asset ${movement.asset}`
+        };
     }
 
-    return ExternalTransaction.movements.some(
+    const matched = externalTransaction.movements.some(
         externalMovement =>
-            externalMovement.from === movement.from &&
-            externalMovement.to === movement.to &&
-            externalMovement.quantity === movement.quantity &&
-            externalMovement.representation === representation.id    
+            assetRepresentations.some(
+                representation =>
+                    externalMovement.from === movement.from &&
+                    externalMovement.to === movement.to &&
+                    externalMovement.quantity === movement.quantity &&
+                    externalMovement.representation === representation.id  
+
+            )
     );
+
+    if (!matched) {
+        return {
+            status: "mismatched",
+            reason: `Movement for asset ${movement.asset} does not match external transaction`
+        };
+    }
+
+    return {
+        status: "matched"
+    };
 }
 
 export function reconcileTransaction(
@@ -39,36 +68,42 @@ export function reconcileTransaction(
     representations: AssetRepresentation[]
 ): Reconciliation {
 
+    const reconciliationBase = {
+        id: `reconciliation_${randomUUID()}`,
+        transactionId: transaction.id,
+        externalTransactionId: externalTransaction.externalId,
+        timestamp: new Date().toISOString()
+    };
+
     if (
         transaction.movements.length !== externalTransaction.movements.length
     ) {
         return {
-            id: `reconciliation_${randomUUID()}`,
-            transactionId: transaction.id,
-            externalTransactionId: externalTransaction.externalId,
+            ...reconciliationBase,
             status: "mismatched",
-            timestamp: new Date().toISOString(),
             reason: "Movement count does not match"
         };
     }
 
-    const allMatched = transaction.movements.every(
-        movement =>
-            movementMatches(
-                movement,
-                externalTransaction,
-                representations
-            )
-    );
+    for (const movement of transaction.movements) {
+
+        const result = matchMovement(
+            movement,
+            externalTransaction,
+            representations
+        );
+
+        if (result.status != "matched") {
+            return {
+                ...reconciliationBase,
+                status: result.status,
+                reason: result.reason
+            };
+        }
+    }
 
     return {
-        id: `reconciliation_${randomUUID()}`,
-        transactionId: transaction.id,
-        externalTransactionId: externalTransaction.externalId,
-        status: allMatched ? "matched" : "mismatched",
-        timestamp: new Date().toISOString(),
-        reason: allMatched
-            ? undefined
-            : "One or more movements do not match"
+        ...reconciliationBase,
+        status: "matched"
     };
 }
