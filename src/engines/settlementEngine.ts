@@ -90,7 +90,7 @@ export function settleTransaction(
         destinationPosition.quantity += movement.quantity;
     }
 
-    // record
+        // record
     for (const movement of transaction.movements) {
         recordTransferMovement(
             transaction,
@@ -98,9 +98,6 @@ export function settleTransaction(
             ledger
         );
     }
-
-    transaction.status = "settled";
-    transaction.settledAt = new Date().toISOString();
 
     const settlement: Settlement = {
         id: `settlement_${randomUUID()}`,
