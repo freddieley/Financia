@@ -66,6 +66,7 @@ describe("settleExternally", () => {
         );
 
         expect(result.success).toBe(true);
+        expect(result.status).toBe("settled");
         expect(result.externalTransactions).toHaveLength(1);
 
         const externalTransaction =
@@ -111,6 +112,7 @@ describe("settleExternally", () => {
         );
 
         expect(result.success).toBe(false);
+        expect(result.status).toBe("unresolved");
 
         expect(result.error)
             .toBe("No representation found for asset bond_001");
@@ -169,11 +171,96 @@ describe("settleExternally", () => {
         );
 
         expect(result.success).toBe(false);
+        expect(result.status).toBe("unresolved");
 
         expect(result.error)
             .toBe(
                 "Multiple representations found for asset bond_001"
             );
+    });
+
+    it("reports partial settlement when a later movement fails", async () => {
+
+        const bond: Asset = {
+            id: "bond_001",
+            type: "bond",
+            issuer: "issuer_001",
+            quantity: 100,
+            metadata: {}
+        };
+
+        const cash: Asset = {
+            id: "gbp_001",
+            type: "cash",
+            issuer: "bank_001",
+            quantity: 10000,
+            currency: "GBP",
+            metadata: {}
+        };
+
+        const bondRepresentation = createRepresentation(
+            bond,
+            "token",
+            "mock"
+        );
+
+        const cashRepresentation = createRepresentation(
+            cash,
+            "token",
+            "mock"
+        );
+
+        const transaction: Transaction = {
+            id: "tx_partial_001",
+            type: "exchange",
+            movements: [
+                {
+                    from: "account_A",
+                    to: "account_B",
+                    asset: bond.id,
+                    quantity: 100
+                },
+                {
+                    from: "account_B",
+                    to: "account_A",
+                    asset: cash.id,
+                    quantity: 10000
+                }
+            ],
+            status: "pending",
+            createdAt: new Date().toISOString()
+        };
+
+        const adapter = new MockTokenAdapter();
+
+        adapter.setBalance(
+            "account_A",
+            bondRepresentation.id,
+            100
+        );
+
+        // Deliberately do NOT fund account_B
+        // with the cash representation.
+
+        const result = await settleExternally(
+            transaction,
+            [
+                bondRepresentation,
+                cashRepresentation
+            ],
+            adapter
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.status).toBe("partial");
+
+        expect(
+            result.externalTransactions
+        ).toHaveLength(1);
+
+        expect(
+            result.externalTransactions[0].status
+        ).toBe("confirmed");
     });
 
 });

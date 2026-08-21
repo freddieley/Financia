@@ -11,6 +11,7 @@ import {
 
 export type ExternalSettlementResult = {
     success: boolean;
+    status: "settled" | "failed" | "partial" | "unresolved";
     externalTransactions: ExternalTransaction[];
     error?: string;
 };
@@ -24,6 +25,7 @@ export async function settleExternally(
     if (transaction.status !== "pending") {
         return {
             success: false,
+            status: "failed",
             externalTransactions: [],
             error: "Transaction is not pending"
         };
@@ -42,42 +44,71 @@ export async function settleExternally(
         if (matchingRepresentations.length === 0) {
             return {
                 success: false,
+                status:
+                    externalTransactions.length > 0
+                        ? "partial"
+                        : "unresolved",
                 externalTransactions,
-                error: `No representation found for asset ${movement.asset}`
+                error:
+                    `No representation found for asset ${movement.asset}`
             };
         }
 
         if (matchingRepresentations.length > 1) {
             return {
                 success: false,
+                status:
+                    externalTransactions.length > 0
+                        ? "partial"
+                        : "unresolved",
                 externalTransactions,
-                error: `Multiple representations found for asset ${movement.asset}`
+                error:
+                    `Multiple representations found for asset ${movement.asset}`
             };
         }
 
         const representation =
             matchingRepresentations[0];
 
-        const externalId = await adapter.transfer(
-            representation,
-            movement.from,
-            movement.to,
-            movement.quantity
-        );
+        try {
 
-        const externalTransaction =
-            await adapter.getTransaction(
+            const externalId = await adapter.transfer(
                 representation,
-                externalId
+                movement.from,
+                movement.to,
+                movement.quantity
             );
 
-        externalTransactions.push(
-            externalTransaction
-        );
+            const externalTransaction =
+                await adapter.getTransaction(
+                    representation,
+                    externalId
+                );
+
+            externalTransactions.push(
+                externalTransaction
+            );
+
+        } catch (error) {
+
+            return {
+                success: false,
+                status:
+                    externalTransactions.length > 0
+                        ? "partial"
+                        : "failed",
+                externalTransactions,
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "External settlement failed"
+            };
+        }
     }
 
     return {
         success: true,
+        status: "settled",
         externalTransactions
     };
 }
