@@ -11,6 +11,17 @@ export class MockTokenAdapter implements TokenAdapter {
     private balances = new Map<string, number>();
     private transactions = new Map<string, ExternalTransaction>();
 
+    public setBalance(
+        accountId: string,
+        representationId: string,
+        quantity: number
+    ): void {
+        this.balances.set(
+            `${accountId}:${representationId}`,
+            quantity
+        );
+    }
+
     async getBalance(
         representation: AssetRepresentation,
         account: string

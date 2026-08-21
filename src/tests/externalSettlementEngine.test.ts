@@ -150,12 +150,15 @@ describe("settleExternally", () => {
 
         const adapter = new MockTokenAdapter();
 
+        adapter.setBalance(
+            "account_A",
+            representationA.id,
+            100
+        );
+
         const result = await settleExternally(
             transaction,
-            [
-                representationA,
-                representationB
-            ],
+            [representationA, representationB],
             adapter
         );
 
