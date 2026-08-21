@@ -56,16 +56,6 @@ export function applySettlementResult(
             };
 
 
-        case "partial":
-
-            return {
-                success: false,
-                transaction,
-                error:
-                    "Transaction has only partially settled"
-            };
-
-
         case "mismatched":
 
             transaction.status = "failed";
@@ -75,6 +65,16 @@ export function applySettlementResult(
                 transaction,
                 error:
                     "Settlement does not reconcile with transaction"
+            };
+
+
+        case "partial":
+
+            return {
+                success: false,
+                transaction,
+                error:
+                    "Transaction has only partially settled"
             };
 
 

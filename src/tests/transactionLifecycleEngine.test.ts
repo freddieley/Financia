@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import type {
-    ReconciliationBatchResult,
+    Transaction,
     Settlement,
-    Transaction
+    ReconciliationBatchResult
 } from "../types.ts";
 
 import {
@@ -29,8 +29,7 @@ function createTransaction(): Transaction {
 
         status: "pending",
 
-        createdAt:
-            new Date().toISOString()
+        createdAt: "2026-01-01T00:00:00.000Z"
     };
 }
 
@@ -41,8 +40,7 @@ function createSettlement(): Settlement {
         id: "settlement_001",
         transactionId: "tx_001",
         status: "settled",
-        timestamp:
-            new Date().toISOString()
+        timestamp: "2026-01-01T00:01:00.000Z"
     };
 }
 
@@ -86,17 +84,14 @@ describe("applySettlementResult", () => {
         const transaction =
             createTransaction();
 
-        const reconciliation:
-            ReconciliationBatchResult = {
-                status: "mismatched",
-                reconciliations: []
-            };
-
         const result =
             applySettlementResult(
                 transaction,
                 createSettlement(),
-                reconciliation
+                {
+                    status: "mismatched",
+                    reconciliations: []
+                }
             );
 
         expect(result.success)
@@ -107,22 +102,19 @@ describe("applySettlementResult", () => {
     });
 
 
-    it("keeps partially settled transactions pending", () => {
+    it("keeps a partially settled transaction pending", () => {
 
         const transaction =
             createTransaction();
-
-        const reconciliation:
-            ReconciliationBatchResult = {
-                status: "partial",
-                reconciliations: []
-            };
 
         const result =
             applySettlementResult(
                 transaction,
                 createSettlement(),
-                reconciliation
+                {
+                    status: "partial",
+                    reconciliations: []
+                }
             );
 
         expect(result.success)
@@ -133,22 +125,19 @@ describe("applySettlementResult", () => {
     });
 
 
-    it("keeps unresolved transactions pending", () => {
+    it("keeps an unresolved transaction pending", () => {
 
         const transaction =
             createTransaction();
-
-        const reconciliation:
-            ReconciliationBatchResult = {
-                status: "unresolved",
-                reconciliations: []
-            };
 
         const result =
             applySettlementResult(
                 transaction,
                 createSettlement(),
-                reconciliation
+                {
+                    status: "unresolved",
+                    reconciliations: []
+                }
             );
 
         expect(result.success)
@@ -159,7 +148,7 @@ describe("applySettlementResult", () => {
     });
 
 
-    it("rejects settlements for another transaction", () => {
+    it("rejects a settlement belonging to another transaction", () => {
 
         const transaction =
             createTransaction();
@@ -168,19 +157,16 @@ describe("applySettlementResult", () => {
             createSettlement();
 
         settlement.transactionId =
-            "different_transaction";
-
-        const reconciliation:
-            ReconciliationBatchResult = {
-                status: "matched",
-                reconciliations: []
-            };
+            "tx_other";
 
         const result =
             applySettlementResult(
                 transaction,
                 settlement,
-                reconciliation
+                {
+                    status: "matched",
+                    reconciliations: []
+                }
             );
 
         expect(result.success)
@@ -191,7 +177,7 @@ describe("applySettlementResult", () => {
     });
 
 
-    it("rejects already completed transactions", () => {
+    it("rejects an already completed transaction", () => {
 
         const transaction =
             createTransaction();
@@ -214,5 +200,34 @@ describe("applySettlementResult", () => {
 
         expect(result.error)
             .toBe("Transaction is not pending");
+    });
+
+
+    it("rejects a settlement that is not settled", () => {
+
+        const transaction =
+            createTransaction();
+
+        const settlement =
+            createSettlement();
+
+        settlement.status =
+            "failed";
+
+        const result =
+            applySettlementResult(
+                transaction,
+                settlement,
+                {
+                    status: "matched",
+                    reconciliations: []
+                }
+            );
+
+        expect(result.success)
+            .toBe(false);
+
+        expect(transaction.status)
+            .toBe("pending");
     });
 });
