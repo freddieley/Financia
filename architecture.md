@@ -1,34 +1,28 @@
 ```CURRENT
-                      API
-                       │
-                       ▼
-                     AGENT
-                       │
-                       ▼
-                     INTENT
-                       │
-                       ▼
-              TRANSACTION ENGINE
-                │      │      │
-                ▼      ▼      ▼
-          Permission  Policy  Position
-                │      │      │
-                └──────┼──────┘
-                       ▼
-                  TRANSACTION
-                       │
-                 movements[]
-                       │
-                       ▼
-              SETTLEMENT ENGINE
-                       │
-                ┌──────┴──────┐
-                ▼             ▼
-             POSITIONS       LEDGER
-                │             │
-                └──────┬──────┘
-                       ▼
-                    STATE
+              ┌───────────────┐
+Intent ──────→│ Transaction   │
+              │ Engine        │
+              └──────┬────────┘
+                     ↓
+              ┌───────────────┐
+              │ Settlement    │
+              │ Engine        │
+              └──────┬────────┘
+                     ↓
+          ┌──────────────────────┐
+          │ Internal / External  │
+          │ Settlement Results   │
+          └──────────┬───────────┘
+                     ↓
+              ┌───────────────┐
+              │ Reconciliation│
+              └──────┬────────┘
+                     ↓
+              ┌───────────────┐
+              │ Lifecycle     │
+              └──────┬────────┘
+                     ↓
+                Transaction
 ```
 ```AIM
                      API
