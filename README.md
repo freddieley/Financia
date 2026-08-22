@@ -1,20 +1,16 @@
-# Financia
+# Financia - The HTTP of Finance
 
-
-✅ Parties
-✅ Accounts
-✅ Assets
-✅ Positions
-✅ Permissions
-✅ Transactions
-✅ Settlement
-✅ Policies
-✅ Agents
-✅ Intents
-🔨 Transaction engine
-⬜ External adapters
-⬜ Tokenisation
-⬜ SDKs
+## Roadmap:
+ 1. First-class Intent API ← now
+ 2. API error/response standardisation
+ 3. Idempotency + transaction/intent lifecycle
+ 4. Persistent storage abstraction instead of hard-wired memory arrays
+ 5. External Adapter SDK/interface
+ 6. Real adapter simulation + adapter registry API
+ 7. Tokenisation engine
+ 8. SDKs
+ 9. Agent-facing protocol/API
+10. Production-grade database + event/audit architecture
 
 
 ```
