@@ -6,7 +6,8 @@ import {
 
 import type {
     AssetRepresentation,
-    SettlementInstruction
+    SettlementInstruction,
+    Transaction
 } from "../types.ts";
 
 import {
@@ -20,6 +21,7 @@ import {
 import {
     MockTokenAdapter
 } from "../adapters/mockTokenAdapter.ts";
+import { transactions } from "../store/memoryStore.ts";
 
 
 const representation: AssetRepresentation = {
@@ -46,6 +48,25 @@ function createInstruction(): SettlementInstruction {
             }
         ],
         status: "pending",
+        createdAt: "2026-01-01T00:00:00.000Z"
+    };
+}
+
+
+function createTransaction(): Transaction {
+    return {
+        id: "transaction_001",
+        intentId: "intent_001",
+        type: "transfer",
+        movements: [
+            {
+                from: "account_A",
+                to: "account_B",
+                asset: "asset_001",
+                quantity: 50
+            }
+        ],
+        executionStatus: "instruction_created",
         createdAt: "2026-01-01T00:00:00.000Z"
     };
 }
@@ -95,10 +116,14 @@ describe(
                     registry
                 } =
                     createTestAdapterRegistry();
+                
+                const transaction =
+                    createTransaction();
 
                 const result =
                     await executeSettlementInstruction(
                         instruction,
+                        transaction,
                         [representation],
                         registry
                     );
@@ -139,9 +164,14 @@ describe(
 
                 instruction.status = "settled";
 
+                
+                const transaction =
+                    createTransaction();
+
                 const result =
                     await executeSettlementInstruction(
                         instruction,
+                        transaction,
                         [representation],
                         new AdapterRegistry()
                     );
@@ -166,10 +196,14 @@ describe(
 
                 const instruction =
                     createInstruction();
+                
+                const transaction =
+                    createTransaction();
 
                 const result =
                     await executeSettlementInstruction(
                         instruction,
+                        transaction,
                         [],
                         new AdapterRegistry()
                     );
@@ -193,6 +227,9 @@ describe(
                 const instruction =
                     createInstruction();
 
+                const transaction =
+                    createTransaction();
+
                 const representationWithUnknownType = {
                     ...representation,
                     type: "account" as const
@@ -201,6 +238,7 @@ describe(
                 const result =
                     await executeSettlementInstruction(
                         instruction,
+                        transaction,
                         [
                             representationWithUnknownType
                         ],
