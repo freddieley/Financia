@@ -35,13 +35,17 @@ export type TransactionExecutionResult = {
     error?: string;
 };
 
+
 export async function executeTransaction(
     intent: Intent,
     agent: Agent,
     context: ExecutionContext
 ): Promise<TransactionExecutionResult> {
 
-    // 1. Create the transaction.
+    // --------------------------------------------------
+    // 1. Create transaction
+    // --------------------------------------------------
+
     const transactionResult =
         createTransaction(
             intent,
@@ -63,7 +67,10 @@ export async function executeTransaction(
         transactionResult.transaction!;
 
 
-    // 2. Execute internal settlement.
+    // --------------------------------------------------
+    // 2. Perform internal settlement
+    // --------------------------------------------------
+
     const settlementResult =
         settleTransaction(
             transaction,
@@ -83,16 +90,22 @@ export async function executeTransaction(
         settlementResult.settlement!;
 
 
-    // 3. Reconcile settlement evidence.
+    // --------------------------------------------------
+    // 3. Reconcile external evidence
+    // --------------------------------------------------
+
     const reconciliation =
         reconcileSettlements(
             transaction,
-            settlement,
-            representations
+            context.externalSettlements,
+            context.representations
         );
 
 
-    // 4. Apply lifecycle rules.
+    // --------------------------------------------------
+    // 4. Apply lifecycle transition
+    // --------------------------------------------------
+
     const lifecycleResult =
         applySettlementResult(
             transaction,
@@ -109,6 +122,11 @@ export async function executeTransaction(
             error: lifecycleResult.error
         };
     }
+
+
+    // --------------------------------------------------
+    // 5. Return complete execution result
+    // --------------------------------------------------
 
     return {
         success: true,

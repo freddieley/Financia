@@ -23,6 +23,7 @@ export type SettlementResult = {
     error?: string;
 };
 
+
 export function settleTransaction(
     transaction: Transaction,
     positions: Position[],
@@ -36,7 +37,15 @@ export function settleTransaction(
         };
     }
 
-    // validate
+    if (transaction.movements.length === 0) {
+        return {
+            success: false,
+            error: "Transaction contains no movements"
+        };
+    }
+
+
+    // Validate every movement before mutating state.
     for (const movement of transaction.movements) {
 
         const sourcePosition = findPosition(
@@ -63,7 +72,8 @@ export function settleTransaction(
         }
     }
 
-    // apply
+
+    // Apply every movement.
     for (const movement of transaction.movements) {
 
         const sourcePosition = findPosition(
@@ -72,6 +82,12 @@ export function settleTransaction(
             positions
         );
 
+        if (!sourcePosition) {
+            throw new Error(
+                "Source position disappeared during settlement"
+            );
+        }
+
         let destinationPosition = findPosition(
             movement.to,
             movement.asset,
@@ -79,6 +95,7 @@ export function settleTransaction(
         );
 
         if (!destinationPosition) {
+
             destinationPosition = {
                 id: `position_${randomUUID()}`,
                 account: movement.to,
@@ -89,18 +106,21 @@ export function settleTransaction(
             positions.push(destinationPosition);
         }
 
-        sourcePosition.quantity -= movement.quantity;   // already validated above
+        sourcePosition.quantity -= movement.quantity;
         destinationPosition.quantity += movement.quantity;
     }
 
-        // record
+
+    // Record the resulting ledger movements.
     for (const movement of transaction.movements) {
+
         recordTransferMovement(
             transaction,
             movement,
             ledger
         );
     }
+
 
     const settlement: Settlement = {
         id: `settlement_${randomUUID()}`,

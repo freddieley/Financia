@@ -464,7 +464,8 @@ app.get('/v1/transactions/:id', (req: Request, res: Response) => {
 app.post('/v1/transactions/:id/settle', (req: Request, res: Response) => {
 
     const transaction = transactions.find(
-        transaction => transaction.id === req.params.id
+        transaction =>
+            transaction.id === req.params.id
     );
 
     if (!transaction) {
@@ -475,7 +476,8 @@ app.post('/v1/transactions/:id/settle', (req: Request, res: Response) => {
 
     const result = settleTransaction(
         transaction,
-        positions
+        positions,
+        ledger
     );
 
     if (!result.success) {
@@ -484,13 +486,17 @@ app.post('/v1/transactions/:id/settle', (req: Request, res: Response) => {
         });
     }
 
-    settlements.push(result.settlement!);
+    settlements.push(
+        result.settlement!
+    );
 
-    res.status(201).json(result.settlement);
+    res.status(201).json(
+        result.settlement
+    );
 });
 
 // POST /v1/transactions/execute
-app.post('/v1/transactions/execute', (req: Request, res: Response) => {
+app.post('/v1/transactions/execute', async (req: Request, res: Response) => {
 
     const {
         agent,
@@ -500,20 +506,42 @@ app.post('/v1/transactions/execute', (req: Request, res: Response) => {
         quantity
     } = req.body;
 
-    if (!agent || !from || !to || !asset || quantity === undefined) {
+
+    // ---------------------------------------------
+    // Validate request
+    // ---------------------------------------------
+
+    if (
+        !agent ||
+        !from ||
+        !to ||
+        !asset ||
+        quantity === undefined
+    ) {
         return res.status(400).json({
-            error: "agent, from, to, asset, and quantity are required"
+            error:
+                "agent, from, to, asset, and quantity are required"
         });
     }
 
-    if (typeof quantity !== "number" || quantity <= 0) {
+    if (
+        typeof quantity !== "number" ||
+        quantity <= 0
+    ) {
         return res.status(400).json({
-            error: "quantity must be a positive number"
+            error:
+                "quantity must be a positive number"
         });
     }
+
+
+    // ---------------------------------------------
+    // Find agent
+    // ---------------------------------------------
 
     const existingAgent = agents.find(
-        existingAgent => existingAgent.id === agent
+        existingAgent =>
+            existingAgent.id === agent
     );
 
     if (!existingAgent) {
@@ -521,6 +549,11 @@ app.post('/v1/transactions/execute', (req: Request, res: Response) => {
             error: "Agent not found"
         });
     }
+
+
+    // ---------------------------------------------
+    // Construct intent
+    // ---------------------------------------------
 
     const intent: Intent = {
         id: `intent_${randomUUID()}`,
@@ -533,19 +566,66 @@ app.post('/v1/transactions/execute', (req: Request, res: Response) => {
         createdAt: new Date().toISOString()
     };
 
-    const result = executeTransaction(
-        intent,
-        existingAgent,
+
+    // ---------------------------------------------
+    // Construct execution context
+    // ---------------------------------------------
+
+    const context = {
         assets,
         positions,
         permissions,
         policies,
         ledger,
-        [],
-        []
-    );
+        representations: assetRepresentations,
+
+        /*
+         * External settlement evidence will eventually
+         * be produced by the external settlement layer.
+         *
+         * For now this endpoint has no external evidence,
+         * so reconciliation correctly remains unresolved.
+         */
+        externalSettlements: []
+    };
+
+
+    // ---------------------------------------------
+    // Execute
+    // ---------------------------------------------
+
+    const result =
+        await executeTransaction(
+            intent,
+            existingAgent,
+            context
+        );
+
+
+    // ---------------------------------------------
+    // Handle failure
+    // ---------------------------------------------
 
     if (!result.success) {
+
+        if (result.transaction) {
+            transactions.push(
+                result.transaction
+            );
+        }
+
+        if (result.settlement) {
+            settlements.push(
+                result.settlement
+            );
+        }
+
+        if (result.reconciliation) {
+            reconciliations.push(
+                ...result.reconciliation.reconciliations
+            );
+        }
+
         return res.status(400).json({
             error: result.error,
             transaction: result.transaction,
@@ -554,8 +634,25 @@ app.post('/v1/transactions/execute', (req: Request, res: Response) => {
         });
     }
 
-    transactions.push(result.transaction!);
-    settlements.push(result.settlement!);
+
+    // ---------------------------------------------
+    // Persist successful execution
+    // ---------------------------------------------
+
+    transactions.push(
+        result.transaction!
+    );
+
+    settlements.push(
+        result.settlement!
+    );
+
+    if (result.reconciliation) {
+        reconciliations.push(
+            ...result.reconciliation.reconciliations
+        );
+    }
+
 
     res.status(201).json(result);
 });

@@ -16,6 +16,37 @@ import {
     executeTransaction
 } from "../engines/transactionExecutionEngine.ts";
 
+import type {
+    ExecutionContext
+} from "../engines/executionContext.ts";
+
+
+const externalSettlements: ExternalSettlement[] = [];
+
+const representations: AssetRepresentation[] = [];
+
+function createContext(
+    positions: Position[] = [
+        {
+            id: "position_001",
+            account: "account_A",
+            asset: "asset_001",
+            quantity: 100
+        }
+    ]
+): ExecutionContext {
+
+    return {
+        assets: [asset],
+        positions,
+        permissions: [permission],
+        policies: [policy],
+        ledger,
+        externalSettlements,
+        representations
+    };
+}
+
 
 const agent: Agent = {
     id: "agent_001",
@@ -77,27 +108,12 @@ const ledger: LedgerEntry[] = [];
 
 describe("executeTransaction", () => {
 
-    it("executes a transaction through the full pipeline", () => {
+    it("executes a transaction through the full pipeline", async () => {
 
-        /*
-         * The transaction is created first, then internally settled,
-         * then reconciled against external evidence.
-         *
-         * We don't know the generated transaction ID beforehand,
-         * so this test initially exercises the pipeline up to the
-         * reconciliation boundary.
-         */
-
-        const result = executeTransaction(
+        const result = await executeTransaction(
             intent,
             agent,
-            [asset],
-            [position],
-            [permission],
-            [policy],
-            ledger,
-            [],
-            []
+            createContext()
         );
 
         expect(result.transaction)
@@ -109,29 +125,25 @@ describe("executeTransaction", () => {
         expect(result.reconciliation)
             .toBeDefined();
 
+        expect(result.reconciliation?.status)
+            .toBe("unresolved");
+
         expect(result.transaction?.status)
             .toBe("pending");
     });
 
 
-    it("fails when transaction creation fails", () => {
+    it("fails when transaction creation fails", async () => {
 
         const invalidIntent: Intent = {
             ...intent,
-
             agent: "unknown_agent"
         };
 
-        const result = executeTransaction(
+        const result = await executeTransaction(
             invalidIntent,
             agent,
-            [asset],
-            [position],
-            [permission],
-            [policy],
-            ledger,
-            [],
-            []
+            createContext()
         );
 
         expect(result.success)
@@ -148,23 +160,12 @@ describe("executeTransaction", () => {
     });
 
 
-    it("returns a transaction when creation succeeds", () => {
+    it("returns a transaction when creation succeeds", async () => {
 
-        const result = executeTransaction(
+        const result = await executeTransaction(
             intent,
             agent,
-            [asset],
-            [{
-                id: "position_001",
-                account: "account_A",
-                asset: "asset_001",
-                quantity: 100
-            }],
-            [permission],
-            [policy],
-            ledger,
-            [],
-            []
+            createContext()
         );
 
         expect(result.transaction)
@@ -178,23 +179,12 @@ describe("executeTransaction", () => {
     });
 
 
-    it("does not mark a transaction settled without reconciliation evidence", () => {
+    it("does not mark a transaction settled without reconciliation evidence", async () => {
 
-        const result = executeTransaction(
+        const result = await executeTransaction(
             intent,
             agent,
-            [asset],
-            [{
-                id: "position_001",
-                account: "account_A",
-                asset: "asset_001",
-                quantity: 100
-            }],
-            [permission],
-            [policy],
-            ledger,
-            [],
-            []
+            createContext()
         );
 
         expect(result.transaction)
