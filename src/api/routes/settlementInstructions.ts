@@ -5,8 +5,13 @@ import { randomUUID } from "crypto";
 
 import {
     settlementInstructions,
-    transactions
+    transactions,
+    representations
 } from "../../store/memoryStore.ts";
+
+import {
+    adapterRegistry
+} from "../../adapters/adapterRegistry.ts";
 
 import {
     createSettlementInstruction
@@ -120,9 +125,27 @@ settlementInstructionsRouter.post(
             });
         }
 
-        const result = await executeSettlementInstruction(
-            instruction
-        );
+        const transaction =
+            transactions.find(
+                candidate =>
+                    candidate.id ===
+                    instruction.transactionId
+            );
+
+        if (!transaction) {
+            return res.status(404).json({
+                error:
+                    "Transaction not found"
+            });
+        }
+
+        const result =
+            await executeSettlementInstruction(
+                instruction,
+                transaction,
+                representations,
+                adapterRegistry
+            );
 
         if (!result.success) {
             return res.status(422).json(
