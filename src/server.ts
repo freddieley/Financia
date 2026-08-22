@@ -15,6 +15,7 @@ import type {
     Intent
 } from "./types.ts";
 import { createTransaction } from "./engines/transactionEngine.ts";
+import { executeTransaction } from "./engines/transactionExecutionEngine.ts";
 import {
     parties,
     accounts,
@@ -363,7 +364,7 @@ app.get('/v1/transactions/:id', (req: Request, res: Response) => {
     res.json(transaction);
 });
 
-// PORT /v1/transactions/:id/settle
+// POST /v1/transactions/:id/settle
 app.post('/v1/transactions/:id/settle', (req: Request, res: Response) => {
 
     const transaction = transactions.find(
@@ -390,6 +391,77 @@ app.post('/v1/transactions/:id/settle', (req: Request, res: Response) => {
     settlements.push(result.settlement!);
 
     res.status(201).json(result.settlement);
+});
+
+// POST /v1/transactions/execute
+app.post('/v1/transactions/execute', (req: Request, res: Response) => {
+
+    const {
+        agent,
+        from,
+        to,
+        asset,
+        quantity
+    } = req.body;
+
+    if (!agent || !from || !to || !asset || quantity === undefined) {
+        return res.status(400).json({
+            error: "agent, from, to, asset, and quantity are required"
+        });
+    }
+
+    if (typeof quantity !== "number" || quantity <= 0) {
+        return res.status(400).json({
+            error: "quantity must be a positive number"
+        });
+    }
+
+    const existingAgent = agents.find(
+        existingAgent => existingAgent.id === agent
+    );
+
+    if (!existingAgent) {
+        return res.status(404).json({
+            error: "Agent not found"
+        });
+    }
+
+    const intent: Intent = {
+        id: `intent_${randomUUID()}`,
+        agent,
+        type: "transfer",
+        from,
+        to,
+        asset,
+        quantity,
+        createdAt: new Date().toISOString()
+    };
+
+    const result = executeTransaction(
+        intent,
+        existingAgent,
+        assets,
+        positions,
+        permissions,
+        policies,
+        ledger,
+        [],
+        []
+    );
+
+    if (!result.success) {
+        return res.status(400).json({
+            error: result.error,
+            transaction: result.transaction,
+            settlement: result.settlement,
+            reconciliation: result.reconciliation
+        });
+    }
+
+    transactions.push(result.transaction!);
+    settlements.push(result.settlement!);
+
+    res.status(201).json(result);
 });
 
 

@@ -3,6 +3,7 @@
     "dev": "node src/server.ts",
     "test": "vitest"
   },
+  "type": "module",
   "dependencies": {
     "body-parser": "^2.3.0",
     "crypto": "^1.0.1",
