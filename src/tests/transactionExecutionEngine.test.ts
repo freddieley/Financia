@@ -136,6 +136,42 @@ function createContext(
 
 describe("executeTransaction", () => {
 
+    it("records failed execution after external settlement failure", async () => {
+
+        const context = createContext();
+
+        context.representations.length = 0;
+
+        const result = await executeTransaction(
+            intent,
+            agent,
+            context
+        );
+
+        expect(result.success)
+            .toBe(false);
+
+        expect(result.transaction?.executionStatus)
+            .toBe("failed");
+    });
+
+    it("tracks execution progress through the successful pipeline", async () => {
+
+        const context = createContext();
+
+        const result = await executeTransaction(
+            intent,
+            agent,
+            context
+        );
+
+        expect(result.success)
+            .toBe(true);
+
+        expect(result.transaction?.executionStatus)
+            .toBe("settled");
+    });
+
     it("executes a transaction through the full pipeline", async () => {
 
         const context = createContext();
@@ -164,7 +200,7 @@ describe("executeTransaction", () => {
         expect(result.reconciliation?.status)
             .toBe("matched");
 
-        expect(result.transaction?.status)
+        expect(result.transaction?.executionStatus)
             .toBe("settled");
 
         expect(context.settlementInstructions)
@@ -223,7 +259,7 @@ describe("executeTransaction", () => {
         expect(result.settlementInstruction)
             .toBeDefined();
 
-        expect(result.transaction?.status)
+        expect(result.transaction?.executionStatus)
             .toBe("settled");
     });
 
@@ -255,7 +291,7 @@ describe("executeTransaction", () => {
         expect(result.settlement)
             .toBeUndefined();
 
-        expect(result.transaction?.status)
+        expect(result.transaction?.executionStatus)
             .toBe("pending");
 
         expect(result.error)

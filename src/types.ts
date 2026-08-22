@@ -1,3 +1,4 @@
+import { TransactionExecutionStatus } from "./types/executionStatus";
 
 
 export type Asset = {
@@ -48,7 +49,7 @@ export type Transaction = {
     id: string;
     type: "transfer" | "exchange" | "purchase" | "mint" | "burn";
     movements: Movement[];
-    status: "pending" | "settled" | "failed";
+    executionStatus?: TransactionExecutionStatus;
     createdAt: string;
     settledAt?: string;
 };

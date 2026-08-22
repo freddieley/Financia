@@ -109,7 +109,7 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 3. Execute settlement instruction externally
+    // 3. Execute external settlement instruction
     // --------------------------------------------------
 
     const instructionExecutionResult =
@@ -120,7 +120,7 @@ export async function executeTransaction(
         );
 
     const externalSettlements =
-        instructionExecutionResult.settlements;
+        instructionExecutionResult.settlements ?? [];
 
     if (externalSettlements.length > 0) {
         context.externalSettlements.push(
@@ -141,7 +141,36 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 4. Perform internal settlement
+    // 4. Reconcile external evidence BEFORE
+    //    applying the internal settlement
+    // --------------------------------------------------
+
+    const reconciliation =
+        reconcileSettlements(
+            transaction,
+            externalSettlements,
+            context.representations
+        );
+
+    if (reconciliation.status !== "matched") {
+        return {
+            success: false,
+            transaction,
+            settlementInstruction,
+            externalSettlements,
+            reconciliation,
+            error:
+                reconciliation.status === "partial"
+                    ? "Settlement has only partially reconciled"
+                    : reconciliation.status === "mismatched"
+                        ? "Settlement does not reconcile with transaction"
+                        : "Settlement could not be reconciled"
+        };
+    }
+
+
+    // --------------------------------------------------
+    // 5. Apply internal settlement
     // --------------------------------------------------
 
     const settlementResult =
@@ -157,24 +186,13 @@ export async function executeTransaction(
             transaction,
             settlementInstruction,
             externalSettlements,
+            reconciliation,
             error: settlementResult.error
         };
     }
 
     const settlement =
         settlementResult.settlement!;
-
-
-    // --------------------------------------------------
-    // 5. Reconcile external evidence
-    // --------------------------------------------------
-
-    const reconciliation =
-        reconcileSettlements(
-            transaction,
-            externalSettlements,
-            context.representations
-        );
 
 
     // --------------------------------------------------
