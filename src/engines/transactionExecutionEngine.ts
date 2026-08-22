@@ -1,17 +1,14 @@
 import type {
     Agent,
-    Asset,
-    Position,
-    Permission,
-    Policy,
     Intent,
     Transaction,
     Settlement,
-    AssetRepresentation,
-    ExternalSettlement,
-    ReconciliationBatchResult,
-    LedgerEntry
+    ReconciliationBatchResult
 } from "../types.ts";
+
+import type {
+    ExecutionContext
+} from "./executionContext.ts";
 
 import {
     createTransaction
@@ -38,28 +35,21 @@ export type TransactionExecutionResult = {
     error?: string;
 };
 
-
-export function executeTransaction(
+export async function executeTransaction(
     intent: Intent,
     agent: Agent,
-    assets: Asset[],
-    positions: Position[],
-    permissions: Permission[],
-    policies: Policy[],
-    ledger: LedgerEntry[],
-    externalSettlements: ExternalSettlement[],
-    representations: AssetRepresentation[]
-): TransactionExecutionResult {
+    context: ExecutionContext
+): Promise<TransactionExecutionResult> {
 
-    // 1. Create the transaction from the intent.
+    // 1. Create the transaction.
     const transactionResult =
         createTransaction(
             intent,
             agent,
-            assets,
-            positions,
-            permissions,
-            policies
+            context.assets,
+            context.positions,
+            context.permissions,
+            context.policies
         );
 
     if (!transactionResult.success) {
@@ -73,12 +63,12 @@ export function executeTransaction(
         transactionResult.transaction!;
 
 
-    // 2. Execute the transaction internally.
+    // 2. Execute internal settlement.
     const settlementResult =
         settleTransaction(
             transaction,
-            positions,
-            ledger
+            context.positions,
+            context.ledger
         );
 
     if (!settlementResult.success) {
@@ -93,18 +83,16 @@ export function executeTransaction(
         settlementResult.settlement!;
 
 
-    // 3. Reconcile against externally observed
-    //    settlement evidence.
+    // 3. Reconcile settlement evidence.
     const reconciliation =
         reconcileSettlements(
             transaction,
-            externalSettlements,
+            settlement,
             representations
         );
 
 
-    // 4. Let the lifecycle engine decide
-    //    the transaction's final state.
+    // 4. Apply lifecycle rules.
     const lifecycleResult =
         applySettlementResult(
             transaction,

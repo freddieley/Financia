@@ -1,13 +1,20 @@
 import { randomUUID } from "crypto";
+
 import type {
     Position,
     Transaction,
     Settlement,
     LedgerEntry
 } from "../types.ts";
-import { recordTransferMovement } from "./ledgerEngine.ts";
-import { accounts, assets, ledger } from "../store/memoryStore.ts";
-import { findPosition, hasSufficientQuantity } from "./positionEngine.ts";
+
+import {
+    recordTransferMovement
+} from "./ledgerEngine.ts";
+
+import {
+    findPosition,
+    hasSufficientQuantity
+} from "./positionEngine.ts";
 
 
 export type SettlementResult = {
