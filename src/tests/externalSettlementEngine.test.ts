@@ -47,7 +47,7 @@ describe("settleExternally", () => {
                     quantity: 100
                 }
             ],
-            status: "pending",
+            executionStatus: "pending",
             createdAt: new Date().toISOString()
         };
 
@@ -99,7 +99,7 @@ describe("settleExternally", () => {
                     quantity: 100
                 }
             ],
-            status: "pending",
+            executionStatus: "pending",
             createdAt: new Date().toISOString()
         };
 
@@ -152,7 +152,7 @@ describe("settleExternally", () => {
                     quantity: 100
                 }
             ],
-            status: "pending",
+            executionStatus: "pending",
             createdAt: new Date().toISOString()
         };
 
@@ -227,7 +227,7 @@ describe("settleExternally", () => {
                     quantity: 10000
                 }
             ],
-            status: "pending",
+            executionStatus: "pending",
             createdAt: new Date().toISOString()
         };
 

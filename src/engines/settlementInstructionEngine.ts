@@ -17,10 +17,13 @@ export function createSettlementInstruction(
     transaction: Transaction
 ): SettlementInstructionResult {
 
-    if (transaction.status !== "pending") {
+    if (
+        transaction.executionStatus !== "created" &&
+        transaction.executionStatus !== "pending"
+    ) {
         return {
             success: false,
-            error: "Transaction is not pending"
+            error: "Transaction is not ready for settlement instruction"
         };
     }
 
