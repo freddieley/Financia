@@ -121,6 +121,7 @@ export async function executeTransaction(
     const instructionExecutionResult =
         await executeSettlementInstruction(
             settlementInstruction,
+            transaction,
             context.representations,
             context.adapters
         );

@@ -1,7 +1,10 @@
+// src/engines/settlementInstructionExecutionEngine.ts
+
 import type {
     SettlementInstruction,
     AssetRepresentation,
-    ExternalSettlement
+    ExternalSettlement,
+    Transaction
 } from "../types.ts";
 
 import type {
@@ -36,6 +39,7 @@ export type SettlementInstructionExecutionResult = {
 
 export async function executeSettlementInstruction(
     instruction: SettlementInstruction,
+    transaction: Transaction,
     representations: AssetRepresentation[],
     adapters: AdapterRegistry
 ): Promise<SettlementInstructionExecutionResult> {
@@ -152,23 +156,6 @@ export async function executeSettlementInstruction(
 
     const adapter =
         adapters.get(representationType);
-
-
-    /*
-     * The external settlement engine now uses
-     * executionStatus consistently.
-     */
-    const transaction = {
-        id: instruction.transactionId,
-
-        type: "transfer" as const,
-
-        movements: instruction.movements,
-
-        executionStatus: "instruction_created" as const,
-
-        createdAt: instruction.createdAt
-    };
 
 
     const result =
