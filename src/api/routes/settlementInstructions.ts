@@ -6,12 +6,12 @@ import { randomUUID } from "crypto";
 import {
     settlementInstructions,
     transactions,
-    representations
+    assetRepresentations
 } from "../../store/memoryStore.ts";
 
 import {
     adapterRegistry
-} from "../../adapters/adapterRegistry.ts";
+} from "../../adapters/defaultAdapterRegistry.ts";
 
 import {
     createSettlementInstruction
@@ -143,7 +143,7 @@ settlementInstructionsRouter.post(
             await executeSettlementInstruction(
                 instruction,
                 transaction,
-                representations,
+                assetRepresentations,
                 adapterRegistry
             );
 
