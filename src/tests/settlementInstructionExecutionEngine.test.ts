@@ -14,8 +14,12 @@ import {
 } from "../engines/settlementInstructionExecutionEngine.ts";
 
 import {
-    adapterRegistry
-} from "../adapters/defaultAdapterRegistry.ts";
+    AdapterRegistry
+} from "../adapters/adapterRegistry.ts";
+
+import {
+    MockTokenAdapter
+} from "../adapters/mockTokenAdapter.ts";
 
 
 const representation: AssetRepresentation = {
@@ -47,6 +51,35 @@ function createInstruction(): SettlementInstruction {
 }
 
 
+function createTestAdapterRegistry(): {
+    registry: AdapterRegistry;
+    adapter: MockTokenAdapter;
+} {
+
+    const adapter =
+        new MockTokenAdapter();
+
+    adapter.setBalance(
+        "account_A",
+        representation.id,
+        100
+    );
+
+    const registry =
+        new AdapterRegistry();
+
+    registry.register(
+        "token",
+        adapter
+    );
+
+    return {
+        registry,
+        adapter
+    };
+}
+
+
 describe(
     "executeSettlementInstruction",
     () => {
@@ -58,11 +91,16 @@ describe(
                 const instruction =
                     createInstruction();
 
+                const {
+                    registry
+                } =
+                    createTestAdapterRegistry();
+
                 const result =
                     await executeSettlementInstruction(
                         instruction,
                         [representation],
-                        adapterRegistry
+                        registry
                     );
 
                 expect(result.success)
@@ -81,6 +119,13 @@ describe(
                     result.settlements[0].externalTransaction
                 )
                     .toBeDefined();
+
+                expect(
+                    result.settlements[0]
+                        .externalTransaction
+                        .status
+                )
+                    .toBe("confirmed");
             }
         );
 
@@ -98,7 +143,7 @@ describe(
                     await executeSettlementInstruction(
                         instruction,
                         [representation],
-                        adapterRegistry
+                        new AdapterRegistry()
                     );
 
                 expect(result.success)
@@ -126,7 +171,7 @@ describe(
                     await executeSettlementInstruction(
                         instruction,
                         [],
-                        adapterRegistry
+                        new AdapterRegistry()
                     );
 
                 expect(result.success)
@@ -156,8 +201,10 @@ describe(
                 const result =
                     await executeSettlementInstruction(
                         instruction,
-                        [representationWithUnknownType],
-                        adapterRegistry
+                        [
+                            representationWithUnknownType
+                        ],
+                        new AdapterRegistry()
                     );
 
                 expect(result.success)
