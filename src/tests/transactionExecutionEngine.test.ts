@@ -9,6 +9,7 @@ import type {
     Intent,
     LedgerEntry,
     ExternalSettlement,
+    SettlementInstruction,
     AssetRepresentation
 } from "../types.ts";
 
@@ -20,10 +21,16 @@ import type {
     ExecutionContext
 } from "../engines/executionContext.ts";
 
+import {
+    adapterRegistry
+} from "../adapters/defaultAdapterRegistry.ts";
+
 
 const externalSettlements: ExternalSettlement[] = [];
 
 const representations: AssetRepresentation[] = [];
+
+const settlementInstructions: SettlementInstruction[] = [];
 
 function createContext(
     positions: Position[] = [
@@ -43,7 +50,9 @@ function createContext(
         policies: [policy],
         ledger,
         externalSettlements,
-        representations
+        representations,
+        settlementInstructions: [],
+        adapters: adapterRegistry
     };
 }
 
