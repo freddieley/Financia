@@ -22,8 +22,12 @@ import type {
 } from "../engines/executionContext.ts";
 
 import {
-    adapterRegistry
-} from "../adapters/defaultAdapterRegistry.ts";
+    AdapterRegistry
+} from "../adapters/adapterRegistry.ts";
+
+import {
+    MockTokenAdapter
+} from "../adapters/mockTokenAdapter.ts";
 
 import {
     createRepresentation
@@ -101,16 +105,31 @@ function createContext(
         )
     ];
 
+    const adapter = new MockTokenAdapter();
+
+    adapter.setBalance(
+        "account_A",
+        representations[0].id,
+        100
+    );
+
+    const adapters = new AdapterRegistry();
+
+    adapters.register(
+        "token",
+        adapter
+    );
+
     return {
         assets: [asset],
         positions,
         permissions: [permission],
         policies: [policy],
-        ledger,
+        ledger: [],
         externalSettlements: [],
         representations,
         settlementInstructions: [],
-        adapters: adapterRegistry
+        adapters
     };
 }
 
