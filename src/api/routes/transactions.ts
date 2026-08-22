@@ -17,7 +17,8 @@ import {
     transactions,
     settlements,
     settlementInstructions,
-    reconciliations
+    reconciliations,
+    intents
 } from "../../store/memoryStore.ts";
 
 import {
@@ -76,6 +77,8 @@ transactionsRouter.post("/", (req, res) => {
         createdAt: new Date().toISOString()
     };
 
+    intents.push(intent);
+
     const result = createTransaction(
         intent,
         existingAgent,
@@ -100,8 +103,49 @@ transactionsRouter.post("/", (req, res) => {
 });
 
 
-transactionsRouter.get("/:id", (req, res) => {
+transactionsRouter.get("/", (req, res) => {
+    const {
+        status,
+        type,
+        agent
+    } = req.query;
 
+    let result = transactions;
+
+    if (typeof status === "string") {
+        result = result.filter(
+            transaction =>
+                transaction.executionStatus === status
+        );
+    }
+
+    if (typeof type === "string") {
+        result = result.filter(
+            transaction =>
+                transaction.type === type
+        );
+    }
+
+    if (typeof agent === "string") {
+        const agentIntentIds = new Set(
+            intents
+                .filter(intent => intent.agent === agent)
+                .map(intent => intent.id)
+        );
+
+        result = result.filter(
+            transaction =>
+                agentIntentIds.has(transaction.intentId)
+        );
+    }
+
+    return res.json({
+        transactions: result
+    });
+});
+
+
+transactionsRouter.get("/:id", (req, res) => {
     const transaction = transactions.find(
         candidate => candidate.id === req.params.id
     );
@@ -112,12 +156,45 @@ transactionsRouter.get("/:id", (req, res) => {
         });
     }
 
-    return res.json(transaction);
+    const intent = intents.find(
+        candidate => candidate.id === transaction.intentId
+    );
+
+    const settlement = settlements.find(
+        candidate =>
+            candidate.transactionId === transaction.id
+    );
+
+    const instruction =
+        settlementInstructions.find(
+            candidate =>
+                candidate.transactionId === transaction.id
+        );
+
+    const transactionReconciliations =
+        reconciliations.filter(
+            candidate =>
+                candidate.transactionId === transaction.id
+        );
+
+    const transactionLedger =
+        ledger.filter(
+            candidate =>
+                candidate.transactionId === transaction.id
+        );
+
+    return res.json({
+        transaction,
+        intent,
+        settlement,
+        settlementInstruction: instruction,
+        reconciliations: transactionReconciliations,
+        ledger: transactionLedger
+    });
 });
 
 
 transactionsRouter.post("/:id/execute", async (req, res) => {
-
     const transaction = transactions.find(
         candidate => candidate.id === req.params.id
     );
@@ -128,45 +205,37 @@ transactionsRouter.post("/:id/execute", async (req, res) => {
         });
     }
 
-    /*
-     * Execution requires the original intent information.
-     *
-     * For now this is reconstructed from the transaction.
-     * We will persist Intent as a first-class object shortly.
-     */
+    if (transaction.executionStatus === "settled") {
+        return res.status(409).json({
+            error: "Transaction has already been settled"
+        });
+    }
 
-    const movement = transaction.movements[0];
+    if (transaction.executionStatus === "failed") {
+        return res.status(409).json({
+            error: "Transaction has already failed"
+        });
+    }
 
-    const agentId = req.body.agent;
+    const intent = intents.find(
+        candidate => candidate.id === transaction.intentId
+    );
 
-    if (typeof agentId !== "string") {
-        return res.status(400).json({
-            error: "agent is required"
+    if (!intent) {
+        return res.status(409).json({
+            error: "Original intent not found"
         });
     }
 
     const agent = agents.find(
-        candidate => candidate.id === agentId
+        candidate => candidate.id === intent.agent
     );
 
     if (!agent) {
-        return res.status(404).json({
-            error: "Agent not found"
+        return res.status(409).json({
+            error: "Transaction agent no longer exists"
         });
     }
-
-    const intent: Intent = {
-        id: `intent_${randomUUID()}`,
-        agent: agent.id,
-        type: transaction.type === "transfer"
-            ? "transfer"
-            : "purchase",
-        from: movement.from,
-        to: movement.to,
-        asset: movement.asset,
-        quantity: movement.quantity,
-        createdAt: transaction.createdAt
-    };
 
     const context = {
         assets,

@@ -97,6 +97,7 @@ export function createTransaction(
 
     const transaction: Transaction = {
         id: `transaction_${randomUUID()}`,
+        intentId: intent.id,
 
         type:
             intent.type === "transfer"

@@ -47,6 +47,7 @@ export type Permission = {
 
 export type Transaction = {
     id: string;
+    intentId: string;
     type: "transfer" | "exchange" | "purchase" | "mint" | "burn";
     movements: Movement[];
     executionStatus?: TransactionExecutionStatus;

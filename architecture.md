@@ -25,24 +25,33 @@ Intent ──────→│ Transaction   │
                 Transaction
 ```
 ```AIM
-                     API
-                      │
-          ┌───────────┼───────────┐
-          ▼           ▼           ▼
-        REST        Python       TS SDK
-          │           │           │
-          └───────────┼───────────┘
-                      ▼
-                Protocol Core
-                      │
-        ┌─────────────┼─────────────┐
-        ▼             ▼             ▼
-    Permission      Policy      Transaction
-      Engine        Engine        Engine
-                      │
-                      ▼
-                 Settlement
-                      │
-                      ▼
-                Asset Ledger
+                      API
+                       │
+           ┌───────────┼───────────┐
+           ▼           ▼           ▼
+         REST        Python       TS SDK
+           │           │           │
+           └───────────┼───────────┘
+                       ▼
+              ┌──────────────────┐
+              │   Financia API   │
+              └────────┬─────────┘
+                       │
+    ┌──────────────────┼──────────────────┐
+    ↓                  ↓                  ↓
+Resources          Permissions         Agents
+    │                  │                  │
+    └──────────────────┼──────────────────┘
+                       ↓
+                  Transactions
+                       │
+           ┌───────────┴───────────┐
+           ↓                       ↓
+    Execution Pipeline       Reconciliation
+           │                       │
+           └───────────┬───────────┘
+                       ↓
+                   Settlement
+                       ↓
+                External Evidence
 ```
