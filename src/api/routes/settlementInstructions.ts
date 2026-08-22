@@ -121,9 +121,7 @@ settlementInstructionsRouter.post(
         }
 
         const result = await executeSettlementInstruction(
-            instruction,
-            context.representations,
-            context.adapters
+            instruction
         );
 
         if (!result.success) {
