@@ -211,4 +211,53 @@ describe("executeTransaction", () => {
         expect(result.transaction?.status)
             .toBe("pending");
     });
+
+    it(
+        "executes the settlement instruction and records external evidence",
+        async () => {
+
+            const result =
+                await executeTransaction(
+                    intent,
+                    agent,
+                    context
+                );
+
+            expect(result.success)
+                .toBe(true);
+
+            expect(result.transaction)
+                .toBeDefined();
+
+            expect(result.settlementInstruction)
+                .toBeDefined();
+
+            expect(
+                result.settlementInstruction?.status
+            )
+                .toBe("settled");
+
+            expect(result.externalSettlements)
+                .toBeDefined();
+
+            expect(result.externalSettlements)
+                .toHaveLength(1);
+
+            expect(
+                result.externalSettlements?.[0].externalTransaction
+            )
+                .toBeDefined();
+
+            expect(result.reconciliation)
+                .toBeDefined();
+
+            expect(result.reconciliation?.status)
+                .toBe("matched");
+
+            expect(context.externalSettlements)
+                .toHaveLength(1);
+
+            expect(context.settlementInstructions)
+                .toHaveLength(1);
+        });
 });

@@ -3,7 +3,9 @@ import type {
     Intent,
     Transaction,
     Settlement,
-    ReconciliationBatchResult
+    ReconciliationBatchResult,
+    SettlementInstruction,
+    ExternalSettlement
 } from "../types.ts";
 
 import type {
@@ -30,12 +32,24 @@ import {
     createSettlementInstruction
 } from "./settlementInstructionEngine.ts";
 
+import {
+    executeSettlementInstruction
+} from "./settlementInstructionExecutionEngine.ts";
+
 
 export type TransactionExecutionResult = {
     success: boolean;
+
     transaction?: Transaction;
+
     settlement?: Settlement;
+
+    settlementInstruction?: SettlementInstruction;
+
+    externalSettlements?: ExternalSettlement[];
+
     reconciliation?: ReconciliationBatchResult;
+
     error?: string;
 };
 
@@ -70,7 +84,7 @@ export async function executeTransaction(
     const transaction =
         transactionResult.transaction!;
 
-    
+
     // --------------------------------------------------
     // 2. Create settlement instruction
     // --------------------------------------------------
@@ -95,7 +109,39 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 3. Perform internal settlement
+    // 3. Execute settlement instruction externally
+    // --------------------------------------------------
+
+    const instructionExecutionResult =
+        await executeSettlementInstruction(
+            settlementInstruction,
+            context.representations,
+            context.adapters
+        );
+
+    const externalSettlements =
+        instructionExecutionResult.settlements;
+
+    if (externalSettlements.length > 0) {
+        context.externalSettlements.push(
+            ...externalSettlements
+        );
+    }
+
+    if (!instructionExecutionResult.success) {
+        return {
+            success: false,
+            transaction,
+            settlementInstruction,
+            externalSettlements,
+            error:
+                instructionExecutionResult.error
+        };
+    }
+
+
+    // --------------------------------------------------
+    // 4. Perform internal settlement
     // --------------------------------------------------
 
     const settlementResult =
@@ -109,6 +155,8 @@ export async function executeTransaction(
         return {
             success: false,
             transaction,
+            settlementInstruction,
+            externalSettlements,
             error: settlementResult.error
         };
     }
@@ -118,19 +166,19 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 4. Reconcile external evidence
+    // 5. Reconcile external evidence
     // --------------------------------------------------
 
     const reconciliation =
         reconcileSettlements(
             transaction,
-            context.externalSettlements,
+            externalSettlements,
             context.representations
         );
 
 
     // --------------------------------------------------
-    // 5. Apply lifecycle transition
+    // 6. Apply lifecycle transition
     // --------------------------------------------------
 
     const lifecycleResult =
@@ -145,6 +193,8 @@ export async function executeTransaction(
             success: false,
             transaction,
             settlement,
+            settlementInstruction,
+            externalSettlements,
             reconciliation,
             error: lifecycleResult.error
         };
@@ -152,13 +202,15 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 6. Return complete execution result
+    // 7. Return complete execution result
     // --------------------------------------------------
 
     return {
         success: true,
         transaction: lifecycleResult.transaction,
         settlement,
+        settlementInstruction,
+        externalSettlements,
         reconciliation
     };
 }
