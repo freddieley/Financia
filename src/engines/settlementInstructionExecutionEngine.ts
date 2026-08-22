@@ -46,7 +46,8 @@ export async function executeSettlementInstruction(
             status: "failed",
             instruction,
             settlements: [],
-            error: "Settlement instruction is not pending"
+            error:
+                "Settlement instruction is not pending"
         };
     }
 
@@ -57,7 +58,8 @@ export async function executeSettlementInstruction(
             status: "failed",
             instruction,
             settlements: [],
-            error: "Settlement instruction contains no movements"
+            error:
+                "Settlement instruction contains no movements"
         };
     }
 
@@ -65,19 +67,8 @@ export async function executeSettlementInstruction(
     instruction.status = "executing";
 
 
-    /*
-     * A settlement instruction may contain movements
-     * involving different assets.
-     *
-     * Each asset representation determines which
-     * external adapter is required.
-     *
-     * For now, one instruction must resolve to exactly
-     * one representation type. This prevents us from
-     * silently mixing settlement rails.
-     */
-
-    const representationTypes = new Set<string>();
+    const representationTypes =
+        new Set<string>();
 
 
     for (const movement of instruction.movements) {
@@ -164,17 +155,18 @@ export async function executeSettlementInstruction(
 
 
     /*
-     * Build a transaction-shaped object from the
-     * instruction so the existing external settlement
-     * engine remains the single place responsible for
-     * external movement execution.
+     * The external settlement engine now uses
+     * executionStatus consistently.
      */
-
     const transaction = {
         id: instruction.transactionId,
+
         type: "transfer" as const,
+
         movements: instruction.movements,
-        status: "pending" as const,
+
+        executionStatus: "instruction_created" as const,
+
         createdAt: instruction.createdAt
     };
 
@@ -189,10 +181,7 @@ export async function executeSettlementInstruction(
 
     if (!result.success) {
 
-        instruction.status =
-            result.status === "partial"
-                ? "failed"
-                : "failed";
+        instruction.status = "failed";
 
         return {
             success: false,

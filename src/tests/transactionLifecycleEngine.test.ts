@@ -27,9 +27,10 @@ function createTransaction(): Transaction {
             }
         ],
 
-        status: "pending",
+        executionStatus: "pending",
 
-        createdAt: "2026-01-01T00:00:00.000Z"
+        createdAt:
+            "2026-01-01T00:00:00.000Z"
     };
 }
 
@@ -40,7 +41,8 @@ function createSettlement(): Settlement {
         id: "settlement_001",
         transactionId: "tx_001",
         status: "settled",
-        timestamp: "2026-01-01T00:01:00.000Z"
+        timestamp:
+            "2026-01-01T00:01:00.000Z"
     };
 }
 
@@ -71,7 +73,7 @@ describe("applySettlementResult", () => {
         expect(result.success)
             .toBe(true);
 
-        expect(transaction.status)
+        expect(transaction.executionStatus)
             .toBe("settled");
 
         expect(transaction.settledAt)
@@ -97,7 +99,7 @@ describe("applySettlementResult", () => {
         expect(result.success)
             .toBe(false);
 
-        expect(transaction.status)
+        expect(transaction.executionStatus)
             .toBe("failed");
     });
 
@@ -120,7 +122,7 @@ describe("applySettlementResult", () => {
         expect(result.success)
             .toBe(false);
 
-        expect(transaction.status)
+        expect(transaction.executionStatus)
             .toBe("pending");
     });
 
@@ -143,7 +145,7 @@ describe("applySettlementResult", () => {
         expect(result.success)
             .toBe(false);
 
-        expect(transaction.status)
+        expect(transaction.executionStatus)
             .toBe("pending");
     });
 
@@ -172,7 +174,7 @@ describe("applySettlementResult", () => {
         expect(result.success)
             .toBe(false);
 
-        expect(transaction.status)
+        expect(transaction.executionStatus)
             .toBe("pending");
     });
 
@@ -182,7 +184,7 @@ describe("applySettlementResult", () => {
         const transaction =
             createTransaction();
 
-        transaction.status =
+        transaction.executionStatus =
             "settled";
 
         const result =
@@ -199,7 +201,9 @@ describe("applySettlementResult", () => {
             .toBe(false);
 
         expect(result.error)
-            .toBe("Transaction is not pending");
+            .toBe(
+                "Transaction has already reached a terminal state"
+            );
     });
 
 
@@ -227,7 +231,7 @@ describe("applySettlementResult", () => {
         expect(result.success)
             .toBe(false);
 
-        expect(transaction.status)
+        expect(transaction.executionStatus)
             .toBe("pending");
     });
 });

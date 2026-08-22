@@ -4,7 +4,11 @@ import type {
     ExternalTransaction,
     Transaction
 } from "../types.ts";
-import type { TokenAdapter } from "../adapters/tokenAdapter.ts";
+
+import type {
+    TokenAdapter
+} from "../adapters/tokenAdapter.ts";
+
 import {
     findRepresentationForAsset
 } from "./representationEngine.ts";
@@ -12,10 +16,18 @@ import {
 
 export type ExternalSettlementResult = {
     success: boolean;
-    status: "settled" | "failed" | "partial" | "unresolved";
+
+    status:
+        | "settled"
+        | "failed"
+        | "partial"
+        | "unresolved";
+
     settlements: ExternalSettlement[];
+
     error?: string;
 };
+
 
 export async function settleExternally(
     transaction: Transaction,
@@ -23,12 +35,16 @@ export async function settleExternally(
     adapter: TokenAdapter
 ): Promise<ExternalSettlementResult> {
 
-    if (transaction.status !== "pending") {
+    if (
+        transaction.executionStatus !== "created" &&
+        transaction.executionStatus !== "instruction_created" &&
+        transaction.executionStatus !== "pending"
+    ) {
         return {
             success: false,
             status: "failed",
             settlements: [],
-            error: "Transaction is not pending"
+            error: "Transaction is not ready for external settlement"
         };
     }
 
@@ -73,12 +89,13 @@ export async function settleExternally(
 
         try {
 
-            const externalId = await adapter.transfer(
-                representation,
-                movement.from,
-                movement.to,
-                movement.quantity
-            );
+            const externalId =
+                await adapter.transfer(
+                    representation,
+                    movement.from,
+                    movement.to,
+                    movement.quantity
+                );
 
             const externalTransaction =
                 await adapter.getTransaction(
