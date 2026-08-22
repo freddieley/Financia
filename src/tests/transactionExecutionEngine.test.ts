@@ -292,7 +292,7 @@ describe("executeTransaction", () => {
             .toBeUndefined();
 
         expect(result.transaction?.executionStatus)
-            .toBe("pending");
+            .toBe("failed");
 
         expect(result.error)
             .toBeDefined();

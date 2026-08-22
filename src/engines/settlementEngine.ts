@@ -30,10 +30,13 @@ export function settleTransaction(
     ledger: LedgerEntry[]
 ): SettlementResult {
 
-    if (transaction.status !== "pending") {
+    if (
+        transaction.executionStatus !== "reconciled" &&
+        transaction.executionStatus !== "externally_settled"
+    ) {
         return {
             success: false,
-            error: "Transaction is not pending"
+            error: "Transaction is not ready for settlement"
         };
     }
 
@@ -45,7 +48,10 @@ export function settleTransaction(
     }
 
 
+    // --------------------------------------------------
     // Validate every movement before mutating state.
+    // --------------------------------------------------
+
     for (const movement of transaction.movements) {
 
         const sourcePosition = findPosition(
@@ -73,7 +79,10 @@ export function settleTransaction(
     }
 
 
+    // --------------------------------------------------
     // Apply every movement.
+    // --------------------------------------------------
+
     for (const movement of transaction.movements) {
 
         const sourcePosition = findPosition(
@@ -111,7 +120,10 @@ export function settleTransaction(
     }
 
 
-    // Record the resulting ledger movements.
+    // --------------------------------------------------
+    // Record ledger movements.
+    // --------------------------------------------------
+
     for (const movement of transaction.movements) {
 
         recordTransferMovement(

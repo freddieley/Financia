@@ -114,7 +114,7 @@ export function createTransaction(
             }
         ],
 
-        status: "pending",
+        executionStatus: "created",
 
         createdAt: new Date().toISOString()
     };

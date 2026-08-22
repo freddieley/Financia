@@ -18,11 +18,14 @@ export function applySettlementResult(
     reconciliation: ReconciliationBatchResult
 ): TransactionLifecycleResult {
 
-    if (transaction.status !== "pending") {
+    if (
+        transaction.executionStatus === "settled" ||
+        transaction.executionStatus === "failed"
+    ) {
         return {
             success: false,
             transaction,
-            error: "Transaction is not pending"
+            error: "Transaction has already reached a terminal state"
         };
     }
 
@@ -46,7 +49,8 @@ export function applySettlementResult(
 
         case "matched":
 
-            transaction.status = "settled";
+            transaction.executionStatus = "settled";
+
             transaction.settledAt =
                 settlement.timestamp;
 
@@ -58,7 +62,7 @@ export function applySettlementResult(
 
         case "mismatched":
 
-            transaction.status = "failed";
+            transaction.executionStatus = "failed";
 
             return {
                 success: false,
@@ -70,6 +74,8 @@ export function applySettlementResult(
 
         case "partial":
 
+            transaction.executionStatus = "pending";
+
             return {
                 success: false,
                 transaction,
@@ -79,6 +85,8 @@ export function applySettlementResult(
 
 
         case "unresolved":
+
+            transaction.executionStatus = "pending";
 
             return {
                 success: false,

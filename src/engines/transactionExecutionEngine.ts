@@ -93,6 +93,9 @@ export async function executeTransaction(
         createSettlementInstruction(transaction);
 
     if (!instructionResult.success) {
+
+        transaction.executionStatus = "failed";
+
         return {
             success: false,
             transaction,
@@ -102,6 +105,9 @@ export async function executeTransaction(
 
     const settlementInstruction =
         instructionResult.instruction!;
+
+    transaction.executionStatus =
+        "instruction_created";
 
     context.settlementInstructions.push(
         settlementInstruction
@@ -123,12 +129,23 @@ export async function executeTransaction(
         instructionExecutionResult.settlements ?? [];
 
     if (externalSettlements.length > 0) {
+
         context.externalSettlements.push(
             ...externalSettlements
         );
+
+        transaction.executionStatus =
+            "externally_settled";
     }
 
     if (!instructionExecutionResult.success) {
+
+        /*
+         * The transaction exists, but external execution
+         * failed. It must never be considered settled.
+         */
+        transaction.executionStatus = "failed";
+
         return {
             success: false,
             transaction,
@@ -141,8 +158,7 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 4. Reconcile external evidence BEFORE
-    //    applying the internal settlement
+    // 4. Reconcile external evidence
     // --------------------------------------------------
 
     const reconciliation =
@@ -153,6 +169,12 @@ export async function executeTransaction(
         );
 
     if (reconciliation.status !== "matched") {
+
+        transaction.executionStatus =
+            reconciliation.status === "mismatched"
+                ? "failed"
+                : "pending";
+
         return {
             success: false,
             transaction,
@@ -168,6 +190,9 @@ export async function executeTransaction(
         };
     }
 
+    transaction.executionStatus =
+        "reconciled";
+
 
     // --------------------------------------------------
     // 5. Apply internal settlement
@@ -181,18 +206,26 @@ export async function executeTransaction(
         );
 
     if (!settlementResult.success) {
+
+        transaction.executionStatus =
+            "failed";
+
         return {
             success: false,
             transaction,
             settlementInstruction,
             externalSettlements,
             reconciliation,
-            error: settlementResult.error
+            error:
+                settlementResult.error
         };
     }
 
     const settlement =
         settlementResult.settlement!;
+
+    transaction.executionStatus =
+        "internally_settled";
 
 
     // --------------------------------------------------
@@ -207,9 +240,10 @@ export async function executeTransaction(
         );
 
     if (!lifecycleResult.success) {
+
         return {
             success: false,
-            transaction,
+            transaction: lifecycleResult.transaction,
             settlement,
             settlementInstruction,
             externalSettlements,
@@ -220,7 +254,7 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 7. Return complete execution result
+    // 7. Complete
     // --------------------------------------------------
 
     return {
