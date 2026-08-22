@@ -26,9 +26,17 @@ import {
     settlements,
     policies,
     agents,
-    ledger
+    ledger,
+    assetRepresentations,
+    externalTransactions,
+    reconciliations
 } from "./store/memoryStore.ts";
 import { settleTransaction } from "./engines/settlementEngine.ts";
+import {
+    createRepresentation,
+    findRepresentation,
+    findRepresentationForAsset
+} from "./engines/representationEngine.ts";
 
 dotenv.config();
 
@@ -192,6 +200,94 @@ app.get('/v1/assets/:id', (req: Request, res: Response) => {
     }
 
     res.json(asset);
+});
+
+
+
+// POST /v1/assets/:id/representations
+app.post('/v1/assets/:id/representations', (req: Request, res: Response) => {
+
+    const asset = assets.find(
+        asset => asset.id === req.params.id
+    );
+
+    if (!asset) {
+        return res.status(404).json({
+            error: "Asset not found"
+        });
+    }
+
+    const {
+        type,
+        network,
+        contract,
+        tokenId,
+        metadata
+    } = req.body;
+
+    if (
+        type !== "token" &&
+        type !== "account" &&
+        type !== "ledger"
+    ) {
+        return res.status(400).json({
+            error: "Invalid representation type"
+        });
+    }
+
+    const representation = createRepresentation(
+        asset,
+        type,
+        network,
+        contract,
+        tokenId,
+        metadata
+    );
+
+    assetRepresentations.push(representation);
+
+    res.status(201).json(representation);
+});
+
+
+// GET /v1/assets/:id/representations
+app.get('/v1/assets/:id/representations', (req: Request, res: Response) => {
+
+    const asset = assets.find(
+        asset => asset.id === req.params.id
+    );
+
+    if (!asset) {
+        return res.status(404).json({
+            error: "Asset not found"
+        });
+    }
+
+    const representations =
+        findRepresentationForAsset(
+            asset.id,
+            assetRepresentations
+        );
+
+    res.json(representations);
+});
+
+// GET /v1/representations/:id
+app.get('/v1/representations/:id', (req: Request, res: Response) => {
+
+    const representation =
+        findRepresentation(
+            req.params.id,
+            assetRepresentations
+        );
+
+    if (!representation) {
+        return res.status(404).json({
+            error: "Representation not found"
+        });
+    }
+
+    res.json(representation);
 });
 
 
