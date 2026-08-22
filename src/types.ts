@@ -1,4 +1,4 @@
-import { TransactionExecutionStatus } from "./types/executionStatus";
+import type { TransactionExecutionStatus } from "./types/executionStatus.ts";
 
 
 export type Asset = {

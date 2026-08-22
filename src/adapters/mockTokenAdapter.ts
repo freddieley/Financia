@@ -1,8 +1,8 @@
-import {
+import type {
     AssetRepresentation,
     ExternalTransaction
 } from "../types.ts";
-import { TokenAdapter } from "./tokenAdapter";
+import type { TokenAdapter } from "./tokenAdapter.ts";
 
 
 
