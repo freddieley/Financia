@@ -25,36 +25,9 @@ import {
     adapterRegistry
 } from "../adapters/defaultAdapterRegistry.ts";
 
-
-const externalSettlements: ExternalSettlement[] = [];
-
-const representations: AssetRepresentation[] = [];
-
-const settlementInstructions: SettlementInstruction[] = [];
-
-function createContext(
-    positions: Position[] = [
-        {
-            id: "position_001",
-            account: "account_A",
-            asset: "asset_001",
-            quantity: 100
-        }
-    ]
-): ExecutionContext {
-
-    return {
-        assets: [asset],
-        positions,
-        permissions: [permission],
-        policies: [policy],
-        ledger,
-        externalSettlements,
-        representations,
-        settlementInstructions: [],
-        adapters: adapterRegistry
-    };
-}
+import {
+    createRepresentation
+} from "../engines/representationEngine.ts";
 
 
 const agent: Agent = {
@@ -71,14 +44,6 @@ const asset: Asset = {
     issuer: "issuer_001",
     quantity: 1000,
     metadata: {}
-};
-
-
-const position: Position = {
-    id: "position_001",
-    account: "account_A",
-    asset: "asset_001",
-    quantity: 100
 };
 
 
@@ -115,15 +80,55 @@ const intent: Intent = {
 const ledger: LedgerEntry[] = [];
 
 
+function createContext(
+    positions: Position[] = [
+        {
+            id: "position_001",
+            account: "account_A",
+            asset: "asset_001",
+            quantity: 100
+        }
+    ]
+): ExecutionContext {
+
+    const representations: AssetRepresentation[] = [
+        createRepresentation(
+            asset,
+            "token",
+            "mock",
+            "mock-token",
+            "asset_001"
+        )
+    ];
+
+    return {
+        assets: [asset],
+        positions,
+        permissions: [permission],
+        policies: [policy],
+        ledger,
+        externalSettlements: [],
+        representations,
+        settlementInstructions: [],
+        adapters: adapterRegistry
+    };
+}
+
+
 describe("executeTransaction", () => {
 
     it("executes a transaction through the full pipeline", async () => {
 
+        const context = createContext();
+
         const result = await executeTransaction(
             intent,
             agent,
-            createContext()
+            context
         );
+
+        expect(result.success)
+            .toBe(true);
 
         expect(result.transaction)
             .toBeDefined();
@@ -131,14 +136,23 @@ describe("executeTransaction", () => {
         expect(result.settlement)
             .toBeDefined();
 
+        expect(result.settlementInstruction)
+            .toBeDefined();
+
         expect(result.reconciliation)
             .toBeDefined();
 
         expect(result.reconciliation?.status)
-            .toBe("unresolved");
+            .toBe("matched");
 
         expect(result.transaction?.status)
-            .toBe("pending");
+            .toBe("settled");
+
+        expect(context.settlementInstructions)
+            .toHaveLength(1);
+
+        expect(context.externalSettlements)
+            .toHaveLength(1);
     });
 
 
@@ -149,10 +163,12 @@ describe("executeTransaction", () => {
             agent: "unknown_agent"
         };
 
+        const context = createContext();
+
         const result = await executeTransaction(
             invalidIntent,
             agent,
-            createContext()
+            context
         );
 
         expect(result.success)
@@ -169,12 +185,14 @@ describe("executeTransaction", () => {
     });
 
 
-    it("returns a transaction when creation succeeds", async () => {
+    it("returns a transaction and settlement when creation succeeds", async () => {
+
+        const context = createContext();
 
         const result = await executeTransaction(
             intent,
             agent,
-            createContext()
+            context
         );
 
         expect(result.transaction)
@@ -183,81 +201,93 @@ describe("executeTransaction", () => {
         expect(result.settlement)
             .toBeDefined();
 
+        expect(result.settlementInstruction)
+            .toBeDefined();
+
         expect(result.transaction?.status)
-            .toBe("pending");
+            .toBe("settled");
     });
 
 
     it("does not mark a transaction settled without reconciliation evidence", async () => {
 
+        const context = createContext();
+
+        /*
+         * Remove the representation so external settlement
+         * cannot execute. The transaction must therefore
+         * remain outside the settled lifecycle.
+         */
+
+        context.representations.length = 0;
+
         const result = await executeTransaction(
             intent,
             agent,
-            createContext()
+            context
         );
+
+        expect(result.success)
+            .toBe(false);
 
         expect(result.transaction)
             .toBeDefined();
 
         expect(result.settlement)
+            .toBeUndefined();
+
+        expect(result.transaction?.status)
+            .toBe("pending");
+
+        expect(result.error)
+            .toBeDefined();
+    });
+
+
+    it("executes the settlement instruction and records external evidence", async () => {
+
+        const context = createContext();
+
+        const result = await executeTransaction(
+            intent,
+            agent,
+            context
+        );
+
+        expect(result.success)
+            .toBe(true);
+
+        expect(result.transaction)
+            .toBeDefined();
+
+        expect(result.settlementInstruction)
+            .toBeDefined();
+
+        expect(result.settlementInstruction?.status)
+            .toBe("settled");
+
+        expect(result.externalSettlements)
+            .toBeDefined();
+
+        expect(result.externalSettlements)
+            .toHaveLength(1);
+
+        expect(
+            result.externalSettlements?.[0].externalTransaction
+        )
             .toBeDefined();
 
         expect(result.reconciliation)
             .toBeDefined();
 
         expect(result.reconciliation?.status)
-            .toBe("unresolved");
+            .toBe("matched");
 
-        expect(result.transaction?.status)
-            .toBe("pending");
+        expect(context.externalSettlements)
+            .toHaveLength(1);
+
+        expect(context.settlementInstructions)
+            .toHaveLength(1);
     });
 
-    it(
-        "executes the settlement instruction and records external evidence",
-        async () => {
-
-            const result =
-                await executeTransaction(
-                    intent,
-                    agent,
-                    context
-                );
-
-            expect(result.success)
-                .toBe(true);
-
-            expect(result.transaction)
-                .toBeDefined();
-
-            expect(result.settlementInstruction)
-                .toBeDefined();
-
-            expect(
-                result.settlementInstruction?.status
-            )
-                .toBe("settled");
-
-            expect(result.externalSettlements)
-                .toBeDefined();
-
-            expect(result.externalSettlements)
-                .toHaveLength(1);
-
-            expect(
-                result.externalSettlements?.[0].externalTransaction
-            )
-                .toBeDefined();
-
-            expect(result.reconciliation)
-                .toBeDefined();
-
-            expect(result.reconciliation?.status)
-                .toBe("matched");
-
-            expect(context.externalSettlements)
-                .toHaveLength(1);
-
-            expect(context.settlementInstructions)
-                .toHaveLength(1);
-        });
 });
