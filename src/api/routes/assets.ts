@@ -1,7 +1,7 @@
+// src/api/routes/assets.ts
+
 import { Router } from "express";
 import { randomUUID } from "crypto";
-
-import type { Asset } from "../../types.ts";
 
 import {
     assets,
@@ -9,6 +9,12 @@ import {
 } from "../../store/memoryStore.ts";
 
 export const assetsRouter = Router();
+
+assetsRouter.get("/", (_req, res) => {
+    return res.json({
+        assets
+    });
+});
 
 assetsRouter.post("/", (req, res) => {
     const {
@@ -19,50 +25,44 @@ assetsRouter.post("/", (req, res) => {
         metadata
     } = req.body;
 
-    const validTypes = [
-        "bond",
-        "cash",
-        "invoice",
-        "equity"
-    ];
-
-    if (!validTypes.includes(type)) {
+    if (
+        typeof type !== "string" ||
+        typeof issuer !== "string" ||
+        typeof quantity !== "number"
+    ) {
         return res.status(400).json({
-            error: "Invalid asset type"
+            error:
+                "type, issuer, and quantity are required"
         });
     }
 
-    if (typeof issuer !== "string") {
+    if (
+        !Number.isFinite(quantity) ||
+        quantity <= 0
+    ) {
         return res.status(400).json({
-            error: "issuer is required"
+            error:
+                "quantity must be a positive number"
         });
     }
 
-    if (!parties.some(party => party.id === issuer)) {
+    if (
+        !parties.some(
+            party => party.id === issuer
+        )
+    ) {
         return res.status(404).json({
             error: "Issuer party not found"
         });
     }
 
-    if (
-        typeof quantity !== "number" ||
-        quantity < 0
-    ) {
-        return res.status(400).json({
-            error: "quantity must be a non-negative number"
-        });
-    }
-
-    const asset: Asset = {
+    const asset = {
         id: `asset_${randomUUID()}`,
-        type,
+        type: type as "bond" | "cash" | "equity" | "invoice",
         issuer,
         quantity,
         currency,
-        metadata:
-            metadata && typeof metadata === "object"
-                ? metadata
-                : {}
+        metadata: metadata ?? {}
     };
 
     assets.push(asset);
@@ -70,13 +70,10 @@ assetsRouter.post("/", (req, res) => {
     return res.status(201).json(asset);
 });
 
-assetsRouter.get("/", (_req, res) => {
-    return res.json(assets);
-});
-
 assetsRouter.get("/:id", (req, res) => {
     const asset = assets.find(
-        candidate => candidate.id === req.params.id
+        candidate =>
+            candidate.id === req.params.id
     );
 
     if (!asset) {

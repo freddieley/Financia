@@ -1,7 +1,7 @@
+// src/api/routes/agents.ts
+
 import { Router } from "express";
 import { randomUUID } from "crypto";
-
-import type { Agent } from "../../types.ts";
 
 import {
     agents,
@@ -11,6 +11,12 @@ import {
 } from "../../store/memoryStore.ts";
 
 export const agentsRouter = Router();
+
+agentsRouter.get("/", (_req, res) => {
+    return res.json({
+        agents
+    });
+});
 
 agentsRouter.post("/", (req, res) => {
     const {
@@ -25,7 +31,11 @@ agentsRouter.post("/", (req, res) => {
         });
     }
 
-    if (!parties.some(party => party.id === owner)) {
+    if (
+        !parties.some(
+            party => party.id === owner
+        )
+    ) {
         return res.status(404).json({
             error: "Owner party not found"
         });
@@ -33,13 +43,15 @@ agentsRouter.post("/", (req, res) => {
 
     if (!Array.isArray(permissionIds)) {
         return res.status(400).json({
-            error: "permissionIds must be an array"
+            error:
+                "permissionIds must be an array"
         });
     }
 
     if (!Array.isArray(policyIds)) {
         return res.status(400).json({
-            error: "policyIds must be an array"
+            error:
+                "policyIds must be an array"
         });
     }
 
@@ -47,12 +59,14 @@ agentsRouter.post("/", (req, res) => {
         permissionIds.some(
             id =>
                 !permissions.some(
-                    permission => permission.id === id
+                    permission =>
+                        permission.id === id
                 )
         )
     ) {
         return res.status(404).json({
-            error: "One or more permissions not found"
+            error:
+                "One or more permissions not found"
         });
     }
 
@@ -60,20 +74,22 @@ agentsRouter.post("/", (req, res) => {
         policyIds.some(
             id =>
                 !policies.some(
-                    policy => policy.id === id
+                    policy =>
+                        policy.id === id
                 )
         )
     ) {
         return res.status(404).json({
-            error: "One or more policies not found"
+            error:
+                "One or more policies not found"
         });
     }
 
-    const agent: Agent = {
+    const agent = {
         id: `agent_${randomUUID()}`,
         owner,
-        permissions: permissionIds,
-        policies: policyIds
+        permissions: [...permissionIds],
+        policies: [...policyIds]
     };
 
     agents.push(agent);
@@ -81,13 +97,10 @@ agentsRouter.post("/", (req, res) => {
     return res.status(201).json(agent);
 });
 
-agentsRouter.get("/", (_req, res) => {
-    return res.json(agents);
-});
-
 agentsRouter.get("/:id", (req, res) => {
     const agent = agents.find(
-        candidate => candidate.id === req.params.id
+        candidate =>
+            candidate.id === req.params.id
     );
 
     if (!agent) {

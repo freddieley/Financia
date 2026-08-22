@@ -1,7 +1,7 @@
+// src/api/routes/policies.ts
+
 import { Router } from "express";
 import { randomUUID } from "crypto";
-
-import type { Policy } from "../../types.ts";
 
 import {
     agents,
@@ -9,6 +9,12 @@ import {
 } from "../../store/memoryStore.ts";
 
 export const policiesRouter = Router();
+
+policiesRouter.get("/", (_req, res) => {
+    return res.json({
+        policies
+    });
+});
 
 policiesRouter.post("/", (req, res) => {
     const {
@@ -25,25 +31,18 @@ policiesRouter.post("/", (req, res) => {
         });
     }
 
-    if (!agents.some(candidate => candidate.id === agent)) {
+    const existingAgent = agents.find(
+        candidate =>
+            candidate.id === agent
+    );
+
+    if (!existingAgent) {
         return res.status(404).json({
             error: "Agent not found"
         });
     }
 
-    if (
-        maxTransaction !== undefined &&
-        (
-            typeof maxTransaction !== "number" ||
-            maxTransaction < 0
-        )
-    ) {
-        return res.status(400).json({
-            error: "maxTransaction must be a non-negative number"
-        });
-    }
-
-    const policy: Policy = {
+    const policy = {
         id: `policy_${randomUUID()}`,
         agent,
         maxTransaction,
@@ -53,23 +52,17 @@ policiesRouter.post("/", (req, res) => {
     };
 
     policies.push(policy);
-
-    const existingAgent = agents.find(
-        candidate => candidate.id === agent
+    existingAgent.policies.push(
+        policy.id
     );
-
-    existingAgent!.policies.push(policy.id);
 
     return res.status(201).json(policy);
 });
 
-policiesRouter.get("/", (_req, res) => {
-    return res.json(policies);
-});
-
 policiesRouter.get("/:id", (req, res) => {
     const policy = policies.find(
-        candidate => candidate.id === req.params.id
+        candidate =>
+            candidate.id === req.params.id
     );
 
     if (!policy) {

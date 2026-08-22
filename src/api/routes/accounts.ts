@@ -1,15 +1,20 @@
+// src/api/routes/accounts.ts
+
 import { Router } from "express";
 import { randomUUID } from "crypto";
 
-import type { Account } from "../../types.ts";
-
 import {
     accounts,
-    parties,
-    positions
+    parties
 } from "../../store/memoryStore.ts";
 
 export const accountsRouter = Router();
+
+accountsRouter.get("/", (_req, res) => {
+    return res.json({
+        accounts
+    });
+});
 
 accountsRouter.post("/", (req, res) => {
     const { owner } = req.body;
@@ -20,17 +25,17 @@ accountsRouter.post("/", (req, res) => {
         });
     }
 
-    const party = parties.find(
-        candidate => candidate.id === owner
-    );
-
-    if (!party) {
+    if (
+        !parties.some(
+            party => party.id === owner
+        )
+    ) {
         return res.status(404).json({
             error: "Owner party not found"
         });
     }
 
-    const account: Account = {
+    const account = {
         id: `account_${randomUUID()}`,
         owner
     };
@@ -40,13 +45,10 @@ accountsRouter.post("/", (req, res) => {
     return res.status(201).json(account);
 });
 
-accountsRouter.get("/", (_req, res) => {
-    return res.json(accounts);
-});
-
 accountsRouter.get("/:id", (req, res) => {
     const account = accounts.find(
-        candidate => candidate.id === req.params.id
+        candidate =>
+            candidate.id === req.params.id
     );
 
     if (!account) {
@@ -56,22 +58,4 @@ accountsRouter.get("/:id", (req, res) => {
     }
 
     return res.json(account);
-});
-
-accountsRouter.get("/:id/positions", (req, res) => {
-    const account = accounts.find(
-        candidate => candidate.id === req.params.id
-    );
-
-    if (!account) {
-        return res.status(404).json({
-            error: "Account not found"
-        });
-    }
-
-    return res.json(
-        positions.filter(
-            position => position.account === account.id
-        )
-    );
 });
