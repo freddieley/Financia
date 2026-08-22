@@ -6,10 +6,7 @@ import type {
     Party,
     Account,
     Asset,
-    Position,
     Permission,
-    Transaction,
-    Settlement,
     Policy,
     Agent,
     Intent
@@ -24,6 +21,7 @@ import {
     transactions,
     positions,
     settlements,
+    settlementInstructions,
     policies,
     agents,
     ledger,
@@ -582,6 +580,7 @@ app.post('/v1/transactions/execute', async (req: Request, res: Response) => {
         ledger,
         representations: assetRepresentations,
         externalSettlements: [],
+        settlementInstructions,
         adapters: adapterRegistry
     };
 

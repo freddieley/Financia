@@ -5,7 +5,8 @@ import type {
     Policy,
     LedgerEntry,
     AssetRepresentation,
-    ExternalSettlement
+    ExternalSettlement,
+    SettlementInstruction
 } from "../types.ts";
 
 import type {
@@ -28,6 +29,8 @@ export type ExecutionContext = {
     representations: AssetRepresentation[];
 
     externalSettlements: ExternalSettlement[];
+
+    settlementInstructions: SettlementInstruction[];
 
     adapters: AdapterRegistry;
 };

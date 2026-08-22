@@ -91,6 +91,14 @@ export type ExternalSettlement = {
     externalTransaction: ExternalTransaction;
 };
 
+export type SettlementInstruction = {
+    id: string;
+    transactionId: string;
+    movements: Movement[];
+    status: "pending" | "executing" | "settled" | "failed";
+    createdAt: string;
+};
+
 type Quantity = {
     value: number;
     unit: string;

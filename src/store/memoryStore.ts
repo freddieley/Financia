@@ -7,6 +7,7 @@ import type {
     Permission,
     Transaction,
     Settlement,
+    SettlementInstruction,
     Policy,
     Agent,
     LedgerEntry,
@@ -27,3 +28,4 @@ export const ledger: LedgerEntry[] = [];
 export const assetRepresentations: AssetRepresentation[] = [];
 export const externalTransactions: ExternalTransaction[] = [];
 export const reconciliations: Reconciliation[] = [];
+export const settlementInstructions: SettlementInstruction[] = [];

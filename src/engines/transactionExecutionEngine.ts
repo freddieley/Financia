@@ -26,6 +26,10 @@ import {
     applySettlementResult
 } from "./transactionLifecycleEngine.ts";
 
+import {
+    createSettlementInstruction
+} from "./settlementInstructionEngine.ts";
+
 
 export type TransactionExecutionResult = {
     success: boolean;
@@ -66,9 +70,32 @@ export async function executeTransaction(
     const transaction =
         transactionResult.transaction!;
 
+    
+    // --------------------------------------------------
+    // 2. Create settlement instruction
+    // --------------------------------------------------
+
+    const instructionResult =
+        createSettlementInstruction(transaction);
+
+    if (!instructionResult.success) {
+        return {
+            success: false,
+            transaction,
+            error: instructionResult.error
+        };
+    }
+
+    const settlementInstruction =
+        instructionResult.instruction!;
+
+    context.settlementInstructions.push(
+        settlementInstruction
+    );
+
 
     // --------------------------------------------------
-    // 2. Perform internal settlement
+    // 3. Perform internal settlement
     // --------------------------------------------------
 
     const settlementResult =
@@ -91,7 +118,7 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 3. Reconcile external evidence
+    // 4. Reconcile external evidence
     // --------------------------------------------------
 
     const reconciliation =
@@ -103,7 +130,7 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 4. Apply lifecycle transition
+    // 5. Apply lifecycle transition
     // --------------------------------------------------
 
     const lifecycleResult =
@@ -125,7 +152,7 @@ export async function executeTransaction(
 
 
     // --------------------------------------------------
-    // 5. Return complete execution result
+    // 6. Return complete execution result
     // --------------------------------------------------
 
     return {
