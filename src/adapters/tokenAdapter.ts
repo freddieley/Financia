@@ -1,4 +1,7 @@
-import { AssetRepresentation, ExternalTransaction } from "../types";
+import type {
+    AssetRepresentation,
+    ExternalTransaction
+} from "../types.ts";
 
 export interface TokenAdapter {
 

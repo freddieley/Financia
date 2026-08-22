@@ -1,12 +1,15 @@
-import { TokenAdapter } from "./tokenAdapter";
+import type { TokenAdapter } from "./tokenAdapter.ts";
+
 
 export class AdapterRegistry {
 
     private adapters: Map<string, TokenAdapter>;
 
+
     constructor() {
         this.adapters = new Map();
     }
+
 
     register(
         type: string,
@@ -21,6 +24,7 @@ export class AdapterRegistry {
 
         this.adapters.set(type, adapter);
     }
+
 
     get(
         type: string
@@ -37,12 +41,14 @@ export class AdapterRegistry {
         return adapter;
     }
 
+
     has(
         type: string
     ): boolean {
 
         return this.adapters.has(type);
     }
+
 
     remove(
         type: string

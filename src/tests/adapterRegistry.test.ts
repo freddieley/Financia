@@ -1,54 +1,27 @@
-import { describe, expect, it } from "vitest";
+import {
+    describe,
+    expect,
+    it
+} from "vitest";
 
 import {
     AdapterRegistry
-} from "../adapters/adapterRegistry";
+} from "../adapters/adapterRegistry.ts";
 
-import type {
-    TokenAdapter
-} from "../adapters/tokenAdapter";
-
-
-const adapter: TokenAdapter = {
-
-    async getBalance() {
-        return 100;
-    },
-
-    async transfer() {
-        return "external_tx_001";
-    },
-
-    async getTransaction() {
-        throw new Error("Not implemented");
-    }
-};
+import {
+    MockTokenAdapter
+} from "../adapters/mockTokenAdapter.ts";
 
 
 describe("AdapterRegistry", () => {
 
     it("registers and retrieves an adapter", () => {
 
-        const registry = new AdapterRegistry();
+        const registry =
+            new AdapterRegistry();
 
-        registry.register(
-            "token",
-            adapter
-        );
-
-        expect(
-            registry.get("token")
-        ).toBe(adapter);
-    });
-
-
-    it("reports whether an adapter exists", () => {
-
-        const registry = new AdapterRegistry();
-
-        expect(
-            registry.has("token")
-        ).toBe(false);
+        const adapter =
+            new MockTokenAdapter();
 
         registry.register(
             "token",
@@ -58,48 +31,62 @@ describe("AdapterRegistry", () => {
         expect(
             registry.has("token")
         ).toBe(true);
+
+        expect(
+            registry.get("token")
+        ).toBe(adapter);
     });
 
 
     it("rejects duplicate adapter types", () => {
 
-        const registry = new AdapterRegistry();
+        const registry =
+            new AdapterRegistry();
+
+        const adapter =
+            new MockTokenAdapter();
 
         registry.register(
             "token",
             adapter
         );
 
-        expect(() =>
+        expect(() => {
+
             registry.register(
                 "token",
                 adapter
-            )
-        ).toThrow(
+            );
+
+        }).toThrow(
             "Adapter already registered: token"
         );
     });
 
 
-    it("fails when retrieving an unknown adapter", () => {
+    it("throws when an adapter does not exist", () => {
 
-        const registry = new AdapterRegistry();
+        const registry =
+            new AdapterRegistry();
 
-        expect(() =>
-            registry.get("token")
-        ).toThrow(
-            "No adapter registered for type: token"
+        expect(() => {
+
+            registry.get("missing");
+
+        }).toThrow(
+            "No adapter registered for type: missing"
         );
     });
 
 
     it("removes an adapter", () => {
 
-        const registry = new AdapterRegistry();
+        const registry =
+            new AdapterRegistry();
 
         registry.register(
             "token",
-            adapter
+            new MockTokenAdapter()
         );
 
         registry.remove("token");
@@ -108,5 +95,4 @@ describe("AdapterRegistry", () => {
             registry.has("token")
         ).toBe(false);
     });
-
 });

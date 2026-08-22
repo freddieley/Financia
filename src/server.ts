@@ -37,6 +37,9 @@ import {
     findRepresentation,
     findRepresentationForAsset
 } from "./engines/representationEngine.ts";
+import {
+    adapterRegistry
+} from "./adapters/defaultAdapterRegistry.ts";
 
 dotenv.config();
 
@@ -578,15 +581,8 @@ app.post('/v1/transactions/execute', async (req: Request, res: Response) => {
         policies,
         ledger,
         representations: assetRepresentations,
-
-        /*
-         * External settlement evidence will eventually
-         * be produced by the external settlement layer.
-         *
-         * For now this endpoint has no external evidence,
-         * so reconciliation correctly remains unresolved.
-         */
-        externalSettlements: []
+        externalSettlements: [],
+        adapters: adapterRegistry
     };
 
 

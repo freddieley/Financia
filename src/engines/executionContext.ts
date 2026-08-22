@@ -8,13 +8,26 @@ import type {
     ExternalSettlement
 } from "../types.ts";
 
+import type {
+    AdapterRegistry
+} from "../adapters/adapterRegistry.ts";
+
 
 export type ExecutionContext = {
+
     assets: Asset[];
+
     positions: Position[];
+
     permissions: Permission[];
+
     policies: Policy[];
+
     ledger: LedgerEntry[];
+
     representations: AssetRepresentation[];
+
     externalSettlements: ExternalSettlement[];
+
+    adapters: AdapterRegistry;
 };
