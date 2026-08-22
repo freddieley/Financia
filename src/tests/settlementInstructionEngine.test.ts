@@ -20,7 +20,7 @@ const transaction: Transaction = {
             quantity: 50
         }
     ],
-    status: "pending",
+    executionStatus: "pending",
     createdAt: "2026-01-01T00:00:00.000Z"
 };
 
@@ -53,7 +53,7 @@ describe("createSettlementInstruction", () => {
 
         const settledTransaction: Transaction = {
             ...transaction,
-            status: "settled"
+            executionStatus: "settled"
         };
 
         const result =
