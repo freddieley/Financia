@@ -120,10 +120,11 @@ settlementInstructionsRouter.post(
             });
         }
 
-        const result =
-            await executeSettlementInstruction(
-                instruction
-            );
+        const result = await executeSettlementInstruction(
+            instruction,
+            context.representations,
+            context.adapters
+        );
 
         if (!result.success) {
             return res.status(422).json(
