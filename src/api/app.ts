@@ -9,6 +9,7 @@ import { permissionsRouter } from "./routes/permissions.ts";
 import { agentsRouter } from "./routes/agents.ts";
 import { policiesRouter } from "./routes/policies.ts";
 import { transactionsRouter } from "./routes/transactions.ts";
+import { intentsRouter } from "./routes/intents.ts";
 
 export function createApp() {
     const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
     app.use("/v1/agents", agentsRouter);
     app.use("/v1/policies", policiesRouter);
     app.use("/v1/transactions", transactionsRouter);
+    app.use("/v1/intents", intentsRouter);
 
     return app;
 }
