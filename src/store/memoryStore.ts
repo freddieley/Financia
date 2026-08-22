@@ -12,7 +12,8 @@ import type {
     Agent,
     LedgerEntry,
     ExternalTransaction,
-    Reconciliation
+    Reconciliation,
+    Intent
 } from "../types.ts";
 
 export const parties: Party[] = [];
@@ -29,3 +30,4 @@ export const assetRepresentations: AssetRepresentation[] = [];
 export const externalTransactions: ExternalTransaction[] = [];
 export const reconciliations: Reconciliation[] = [];
 export const settlementInstructions: SettlementInstruction[] = [];
+export const intents: Intent[] = [];
