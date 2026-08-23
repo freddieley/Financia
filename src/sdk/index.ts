@@ -4,6 +4,8 @@ export {
 } from "./client.ts";
 
 export type {
+    AgentIntentInput,
+    AgentIntentResult,
     CreateAssetInput,
     CreateIntentInput,
     FinanciaClientOptions,
