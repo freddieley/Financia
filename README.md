@@ -7,8 +7,8 @@
  4. Formal transaction + intent state machines ✓
  5. Storage interface ✓
  6. External adapter interface/SDK ✓
- 7. Realistic adapter simulation ← now
- 8. Tokenisation engine
+ 7. Realistic adapter simulation ✓
+ 8. Tokenisation engine ← now
  9. SDKs
 10. Agent protocol
 
