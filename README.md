@@ -1,16 +1,16 @@
 # Financia - The HTTP of Finance
 
 ## Roadmap:
- 1. First-class Intent API ← now
- 2. API error/response standardisation
- 3. Idempotency + transaction/intent lifecycle
- 4. Persistent storage abstraction instead of hard-wired memory arrays
- 5. External Adapter SDK/interface
- 6. Real adapter simulation + adapter registry API
- 7. Tokenisation engine
- 8. SDKs
- 9. Agent-facing protocol/API
-10. Production-grade database + event/audit architecture
+ 1. API response/error standardisation ← next
+ 2. Intent API becomes genuinely first-class
+ 3. Idempotency keys
+ 4. Formal transaction + intent state machines
+ 5. Storage interface
+ 6. External adapter interface/SDK
+ 7. Realistic adapter simulation
+ 8. Tokenisation engine
+ 9. SDKs
+10. Agent protocol
 
 
 ```
