@@ -9,11 +9,25 @@ import {
 } from "../response.ts";
 
 import {
+    executeIntent
+} from "../../engines/intentExecutionEngine.ts";
+
+import {
+    intents,
     agents,
     accounts,
     assets,
-    intents
+    permissions,
+    policies,
+    positions,
+    ledger,
+    assetRepresentations,
+    settlementInstructions
 } from "../../store/memoryStore.ts";
+
+import {
+    adapterRegistry
+} from "../../adapters/defaultAdapterRegistry.ts";
 
 export const intentsRouter = Router();
 
@@ -229,6 +243,9 @@ intentsRouter.post("/", (req, res) => {
         to,
         asset,
         quantity,
+
+        status: "pending" as const,
+
         createdAt:
             new Date().toISOString()
     };
@@ -265,3 +282,58 @@ intentsRouter.get("/:id", (req, res) => {
         )
     );
 });
+
+intentsRouter.post(
+    "/:id/execute",
+    async (req, res) => {
+
+        const result =
+            await executeIntent(
+                req.params.id,
+                intents,
+                agents,
+                {
+                    assets,
+                    positions,
+                    permissions,
+                    policies,
+                    ledger,
+                    representations:
+                        assetRepresentations,
+                    externalSettlements: [],
+                    settlementInstructions,
+                    adapters:
+                        adapterRegistry
+                }
+            );
+
+
+        if (!result.success) {
+
+            return res.status(422).json(
+                failure(
+                    "INTENT_EXECUTION_FAILED",
+                    result.error,
+                    {
+                        intent:
+                            result.intent,
+                        transaction:
+                            result.transaction
+                    },
+                    res.locals.requestId
+                )
+            );
+        }
+
+
+        return res.status(201).json(
+            success({
+                intent:
+                    result.intent,
+
+                transaction:
+                    result.transaction
+            })
+        );
+    }
+);

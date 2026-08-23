@@ -1,8 +1,8 @@
 # Financia - The HTTP of Finance
 
 ## Roadmap:
- 1. API response/error standardisation ← next
- 2. Intent API becomes genuinely first-class
+ 1. API response/error standardisation
+ 2. Intent API becomes genuinely first-class ← now
  3. Idempotency keys
  4. Formal transaction + intent state machines
  5. Storage interface

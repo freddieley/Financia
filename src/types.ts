@@ -1,4 +1,4 @@
-import type { TransactionExecutionStatus } from "./types/executionStatus.ts";
+import type { IntentStatus, TransactionExecutionStatus } from "./types/executionStatus.ts";
 
 
 export type Asset = {
@@ -134,6 +134,9 @@ export type Intent = {
     asset: string;
     quantity: number;
     createdAt: string;
+    status?: IntentStatus;
+    executedAt?: string;
+    transactionId?: string;
 };
 
 

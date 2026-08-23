@@ -7,3 +7,8 @@ export type TransactionExecutionStatus =
     | "internally_settled"
     | "settled"
     | "failed";
+
+export type IntentStatus =
+    | "pending"
+    | "executed"
+    | "failed";
