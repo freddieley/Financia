@@ -9,7 +9,7 @@
  6. External adapter interface/SDK ✓
  7. Realistic adapter simulation ✓
  8. Tokenisation engine ✓
- 9. SDKs ← next
+ 9. SDKs ← now
 10. Agent protocol
 
 
