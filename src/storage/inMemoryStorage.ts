@@ -3,6 +3,24 @@ import type {
     StorageCollections
 } from "./storage.ts";
 
+function getCollectionId(
+    value: StorageCollections[keyof StorageCollections]
+): string | undefined {
+    if ("id" in value && typeof value.id === "string") {
+        return value.id;
+    }
+
+    if (
+        "externalTransaction" in value &&
+        value.externalTransaction &&
+        typeof value.externalTransaction.id === "string"
+    ) {
+        return value.externalTransaction.id;
+    }
+
+    return undefined;
+}
+
 export class InMemoryStorage implements Storage {
     private readonly collections: {
         [K in keyof StorageCollections]: StorageCollections[K][];
@@ -31,7 +49,7 @@ export class InMemoryStorage implements Storage {
         id: string
     ): StorageCollections[K] | undefined {
         return this.collections[collection].find(
-            value => value.id === id
+            value => getCollectionId(value) === id
         );
     }
 
@@ -48,7 +66,9 @@ export class InMemoryStorage implements Storage {
         value: StorageCollections[K]
     ): boolean {
         const values = this.collections[collection];
-        const index = values.findIndex(candidate => candidate.id === id);
+        const index = values.findIndex(
+            candidate => getCollectionId(candidate) === id
+        );
 
         if (index === -1) {
             return false;
@@ -63,7 +83,9 @@ export class InMemoryStorage implements Storage {
         id: string
     ): boolean {
         const values = this.collections[collection];
-        const index = values.findIndex(candidate => candidate.id === id);
+        const index = values.findIndex(
+            candidate => getCollectionId(candidate) === id
+        );
 
         if (index === -1) {
             return false;
