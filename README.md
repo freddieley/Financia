@@ -3,9 +3,9 @@
 ## Roadmap:
  1. API response/error standardisation
  2. Intent API becomes genuinely first-class
- 3. Idempotency keys ← now
- 4. Formal transaction + intent state machines
- 5. Storage interface
+ 3. Idempotency keys ✓
+ 4. Formal transaction + intent state machines ✓
+ 5. Storage interface ← now
  6. External adapter interface/SDK
  7. Realistic adapter simulation
  8. Tokenisation engine
