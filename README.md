@@ -9,8 +9,27 @@
  6. External adapter interface/SDK ✓
  7. Realistic adapter simulation ✓
  8. Tokenisation engine ✓
- 9. SDKs ← now
-10. Agent protocol
+ 9. SDKs ✓
+10. Agent protocol ✓
+11. Durable storage + production hardening ← next
+
+### Agent protocol
+
+Agents can submit intents through the protocol endpoint:
+
+```http
+POST /v1/agent/intents
+```
+
+The protocol validates the agent, accounts, and asset, then evaluates the
+agent's permissions and policies before an intent is created. Authorization
+results are returned alongside the created intent.
+
+An unauthorized request is rejected with `AGENT_INTENT_NOT_AUTHORIZED`.
+Policy-based approval requirements are surfaced as `requiresApproval: true`
+and do not automatically execute the intent.
+
+The SDK exposes the same flow through `FinanciaClient.submitAgentIntent()`.
 
 
 ```
