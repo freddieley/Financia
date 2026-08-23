@@ -4,6 +4,11 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 
 import {
+    success,
+    failure
+} from "../response.ts";
+
+import {
     agents,
     policies
 } from "../../store/memoryStore.ts";
@@ -11,9 +16,11 @@ import {
 export const policiesRouter = Router();
 
 policiesRouter.get("/", (_req, res) => {
-    return res.json({
-        policies
-    });
+    return res.json(
+        success({
+            policies
+        })
+    );
 });
 
 policiesRouter.post("/", (req, res) => {
@@ -26,9 +33,14 @@ policiesRouter.post("/", (req, res) => {
     } = req.body;
 
     if (typeof agent !== "string") {
-        return res.status(400).json({
-            error: "agent is required"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_POLICY_REQUEST",
+                "agent is required",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const existingAgent = agents.find(
@@ -37,9 +49,14 @@ policiesRouter.post("/", (req, res) => {
     );
 
     if (!existingAgent) {
-        return res.status(404).json({
-            error: "Agent not found"
-        });
+        return res.status(404).json(
+            failure(
+                "AGENT_NOT_FOUND",
+                "Agent not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const policy = {
@@ -56,7 +73,11 @@ policiesRouter.post("/", (req, res) => {
         policy.id
     );
 
-    return res.status(201).json(policy);
+    return res.status(201).json(
+        success(
+            policy
+        )
+    );
 });
 
 policiesRouter.get("/:id", (req, res) => {
@@ -66,10 +87,19 @@ policiesRouter.get("/:id", (req, res) => {
     );
 
     if (!policy) {
-        return res.status(404).json({
-            error: "Policy not found"
-        });
+        return res.status(404).json(
+            failure(
+                "POLICY_NOT_FOUND",
+                "Policy not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
-    return res.json(policy);
+    return res.json(
+        success(
+            policy
+        )
+    );
 });

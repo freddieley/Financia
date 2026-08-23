@@ -4,6 +4,11 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 
 import {
+    success,
+    failure
+} from "../response.ts";
+
+import {
     accounts,
     agents,
     assets,
@@ -14,9 +19,11 @@ import {
 export const permissionsRouter = Router();
 
 permissionsRouter.get("/", (_req, res) => {
-    return res.json({
-        permissions
-    });
+    return res.json(
+        success({
+            permissions
+        })
+    );
 });
 
 permissionsRouter.post("/", (req, res) => {
@@ -31,10 +38,14 @@ permissionsRouter.post("/", (req, res) => {
         typeof subject !== "string" ||
         typeof action !== "string"
     ) {
-        return res.status(400).json({
-            error:
-                "subject and action are required"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_PERMISSION_REQUEST",
+                "subject and action are required",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -45,10 +56,14 @@ permissionsRouter.post("/", (req, res) => {
             "sell"
         ].includes(action)
     ) {
-        return res.status(400).json({
-            error:
-                "Invalid permission action"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_PERMISSION_ACTION",
+                "Invalid permission action",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const subjectExists =
@@ -64,10 +79,14 @@ permissionsRouter.post("/", (req, res) => {
         );
 
     if (!subjectExists) {
-        return res.status(404).json({
-            error:
-                "Permission subject not found"
-        });
+        return res.status(404).json(
+            failure(
+                "PERMISSION_NOT_FOUND",
+                "Permission subject not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -77,9 +96,14 @@ permissionsRouter.post("/", (req, res) => {
                 candidate.id === asset
         )
     ) {
-        return res.status(404).json({
-            error: "Asset not found"
-        });
+        return res.status(404).json(
+            failure(
+                "ASSET_NOT_FOUND",
+                "Asset not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const permission = {
@@ -103,7 +127,9 @@ permissionsRouter.post("/", (req, res) => {
     }
 
     return res.status(201).json(
-        permission
+        success(
+            permission
+        )
     );
 });
 
@@ -114,10 +140,19 @@ permissionsRouter.get("/:id", (req, res) => {
     );
 
     if (!permission) {
-        return res.status(404).json({
-            error: "Permission not found"
-        });
+        return res.status(404).json(
+            failure(
+                "PERMISSION_NOT_FOUND",
+                "Permission not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
-    return res.json(permission);
+    return res.json(
+        success(
+            permission
+        )
+    );
 });

@@ -4,11 +4,17 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 
 import {
+    success,
+    failure
+} from "../response.ts";
+
+import {
     agents,
     accounts,
     assets,
     intents
 } from "../../store/memoryStore.ts";
+import { formatSyntaxKind } from "typescript/unstable/ast";
 
 export const intentsRouter = Router();
 
@@ -50,9 +56,14 @@ intentsRouter.get("/", (req, res) => {
         !Number.isInteger(numericOffset) ||
         numericOffset < 0
     ) {
-        return res.status(400).json({
-            error: "Invalid offset"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_OFFSET",
+                "Invalid offset",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -60,9 +71,14 @@ intentsRouter.get("/", (req, res) => {
         (!Number.isInteger(numericLimit) ||
             numericLimit < 0)
     ) {
-        return res.status(400).json({
-            error: "Invalid limit"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_LIMIT",
+                "Invalid limit",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const items =
@@ -73,12 +89,14 @@ intentsRouter.get("/", (req, res) => {
                 numericOffset + numericLimit
             );
 
-    return res.json({
-        intents: items,
-        total: result.length,
-        limit: numericLimit,
-        offset: numericOffset
-    });
+    return res.json(
+        success({
+            intents: items,
+            total: result.length,
+            limit: numericLimit,
+            offset: numericOffset
+        })
+    );
 });
 
 intentsRouter.post("/", (req, res) => {
@@ -99,10 +117,14 @@ intentsRouter.post("/", (req, res) => {
         typeof asset !== "string" ||
         typeof quantity !== "number"
     ) {
-        return res.status(400).json({
-            error:
-                "agent, type, from, to, asset, and quantity are required"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_INTENT_REQUEST",
+                "agent, type, from, to, asset, and quantity are required",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -112,19 +134,28 @@ intentsRouter.post("/", (req, res) => {
             "sell"
         ].includes(type)
     ) {
-        return res.status(400).json({
-            error: "Invalid intent type"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_INTENT_TYPE",
+                "Invalid intent type",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
         !Number.isFinite(quantity) ||
         quantity <= 0
     ) {
-        return res.status(400).json({
-            error:
-                "quantity must be greater than zero"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_QUANTITY",
+                "quantity must be greater than zero",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -133,9 +164,14 @@ intentsRouter.post("/", (req, res) => {
                 candidate.id === agent
         )
     ) {
-        return res.status(404).json({
-            error: "Agent not found"
-        });
+        return res.status(404).json(
+            failure(
+                "AGENT_NOT_FOUND",
+                "Agent not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -144,9 +180,14 @@ intentsRouter.post("/", (req, res) => {
                 candidate.id === from
         )
     ) {
-        return res.status(404).json({
-            error: "Source account not found"
-        });
+        return res.status(404).json(
+            failure(
+                "ACCOUNT_NOT_FOUND",
+                "Source account not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -155,10 +196,14 @@ intentsRouter.post("/", (req, res) => {
                 candidate.id === to
         )
     ) {
-        return res.status(404).json({
-            error:
-                "Destination account not found"
-        });
+        return res.status(404).json(
+            failure(
+                "ACCOUNT_NOT_FOUND",
+                "Destination account not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -167,9 +212,14 @@ intentsRouter.post("/", (req, res) => {
                 candidate.id === asset
         )
     ) {
-        return res.status(404).json({
-            error: "Asset not found"
-        });
+        return res.status(404).json(
+            failure(
+                "ASSET_NOT_FOUND",
+                "Asset not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const intent = {
@@ -186,7 +236,11 @@ intentsRouter.post("/", (req, res) => {
 
     intents.push(intent);
 
-    return res.status(201).json(intent);
+    return res.status(201).json(
+        success(
+            intent
+        )
+    );
 });
 
 intentsRouter.get("/:id", (req, res) => {
@@ -196,10 +250,19 @@ intentsRouter.get("/:id", (req, res) => {
     );
 
     if (!intent) {
-        return res.status(404).json({
-            error: "Intent not found"
-        });
+        return res.status(404).json(
+            failure(
+                "INTENT_NOT_FOUND",
+                "Intent not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
-    return res.json(intent);
+    return res.json(
+        success(
+            intent
+        )
+    );
 });
