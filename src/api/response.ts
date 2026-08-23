@@ -46,3 +46,17 @@ export function failure(
         }
     };
 }
+
+export function requestFailure(
+    requestId: string,
+    code: string,
+    message: string,
+    details?: unknown
+): ApiError {
+    return failure(
+        code,
+        message,
+        details,
+        requestId
+    );
+}

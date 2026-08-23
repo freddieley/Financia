@@ -4,6 +4,11 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 
 import {
+    success,
+    failure
+} from "../response.ts";
+
+import {
     assetRepresentations,
     assets
 } from "../../store/memoryStore.ts";
@@ -11,10 +16,12 @@ import {
 export const representationsRouter = Router();
 
 representationsRouter.get("/", (_req, res) => {
-    return res.json({
-        representations:
-            assetRepresentations
-    });
+    return res.json(
+        success({
+            representations:
+                assetRepresentations
+        })
+    );
 });
 
 representationsRouter.post("/", (req, res) => {
@@ -31,10 +38,14 @@ representationsRouter.post("/", (req, res) => {
         typeof asset !== "string" ||
         typeof type !== "string"
     ) {
-        return res.status(400).json({
-            error:
-                "asset and type are required"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_REPRESENTATION_REQUEST",
+                "asset and type are required",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -42,9 +53,14 @@ representationsRouter.post("/", (req, res) => {
         type !== "account" &&
         type !== "ledger"
     ) {
-        return res.status(400).json({
-            error: "Invalid representation type"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_REPRESENTATION_TYPE",
+                "Invalid representation type",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -53,9 +69,14 @@ representationsRouter.post("/", (req, res) => {
                 candidate.id === asset
         )
     ) {
-        return res.status(404).json({
-            error: "Asset not found"
-        });
+        return res.status(404).json(
+            failure(
+                "ASSET_NOT_FOUND",
+                "Asset not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const representation = {
@@ -73,7 +94,9 @@ representationsRouter.post("/", (req, res) => {
     );
 
     return res.status(201).json(
-        representation
+        success(
+            representation
+        )
     );
 });
 
@@ -85,11 +108,19 @@ representationsRouter.get("/:id", (req, res) => {
         );
 
     if (!representation) {
-        return res.status(404).json({
-            error:
-                "Representation not found"
-        });
+        return res.status(404).json(
+            failure(
+                "REPRESENTATION_NOT_FOUND",
+                "Representation not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
-    return res.json(representation);
+    return res.json(
+        success(
+            representation
+        )
+    );
 });

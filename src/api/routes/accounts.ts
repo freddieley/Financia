@@ -4,6 +4,11 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 
 import {
+    success,
+    failure
+} from "../response.ts";
+
+import {
     accounts,
     parties
 } from "../../store/memoryStore.ts";
@@ -11,18 +16,25 @@ import {
 export const accountsRouter = Router();
 
 accountsRouter.get("/", (_req, res) => {
-    return res.json({
-        accounts
-    });
+    return res.json(
+        success({
+            accounts
+        })
+    );
 });
 
 accountsRouter.post("/", (req, res) => {
     const { owner } = req.body;
 
     if (typeof owner !== "string") {
-        return res.status(400).json({
-            error: "owner is required"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_ACCOUNT_REQUEST",
+                "owner is required",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
@@ -30,9 +42,14 @@ accountsRouter.post("/", (req, res) => {
             party => party.id === owner
         )
     ) {
-        return res.status(404).json({
-            error: "Owner party not found"
-        });
+        return res.status(404).json(
+            failure(
+                "PARTY_NOT_FOUND",
+                "Owner party not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const account = {
@@ -42,7 +59,11 @@ accountsRouter.post("/", (req, res) => {
 
     accounts.push(account);
 
-    return res.status(201).json(account);
+    return res.status(201).json(
+        success(
+            account
+        )
+    );
 });
 
 accountsRouter.get("/:id", (req, res) => {
@@ -52,10 +73,19 @@ accountsRouter.get("/:id", (req, res) => {
     );
 
     if (!account) {
-        return res.status(404).json({
-            error: "Account not found"
-        });
+        return res.status(404).json(
+            failure(
+                "ACCOUNT_NOT_FOUND",
+                "Account not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
-    return res.json(account);
+    return res.json(
+        success(
+            account
+        )
+    );
 });

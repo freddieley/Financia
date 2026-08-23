@@ -3,14 +3,21 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
 
+import {
+    success,
+    failure
+} from "../response.ts";
+
 import { parties } from "../../store/memoryStore.ts";
 
 export const partiesRouter = Router();
 
 partiesRouter.get("/", (_req, res) => {
-    return res.json({
-        parties
-    });
+    return res.json(
+        success({
+            parties
+        })
+    );
 });
 
 partiesRouter.post("/", (req, res) => {
@@ -21,9 +28,14 @@ partiesRouter.post("/", (req, res) => {
         type !== "company" &&
         type !== "agent"
     ) {
-        return res.status(400).json({
-            error: "Invalid party type"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_PARTY_TYPE",
+                "Invalid party type",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const party = {
@@ -33,7 +45,11 @@ partiesRouter.post("/", (req, res) => {
 
     parties.push(party);
 
-    return res.status(201).json(party);
+    return res.status(201).json(
+        success(
+            party
+        )
+    );
 });
 
 partiesRouter.get("/:id", (req, res) => {
@@ -43,10 +59,19 @@ partiesRouter.get("/:id", (req, res) => {
     );
 
     if (!party) {
-        return res.status(404).json({
-            error: "Party not found"
-        });
+        return res.status(404).json(
+            failure(
+                "PARTY_NOT_FOUND",
+                "Party not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
-    return res.json(party);
+    return res.json(
+        success(
+            party
+        )
+    );
 });
