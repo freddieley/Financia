@@ -11,7 +11,18 @@
  8. Tokenisation engine ✓
  9. SDKs ✓
 10. Agent protocol ✓
-11. Durable storage + production hardening ← next
+11. Durable storage + production hardening ← in progress
+
+### Durable storage
+
+Financia now includes a durable JSON storage backend implementing the existing
+`Storage` interface. It uses atomic temporary-file replacement so a completed
+write replaces the previous state rather than partially overwriting it.
+
+The backend is intentionally separate from the current in-memory API wiring;
+the next production-hardening step is migrating application state behind the
+storage interface rather than having routes depend directly on in-memory
+collections.
 
 ### Agent protocol
 
