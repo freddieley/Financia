@@ -20,6 +20,19 @@ export type CreateIntentInput = Pick<
     "agent" | "type" | "from" | "to" | "asset" | "quantity"
 >;
 
+export type AgentIntentInput = Omit<CreateIntentInput, "agent"> & {
+    agent: string;
+};
+
+export type AgentIntentResult = {
+    intent: Intent;
+    authorization: {
+        allowed: boolean;
+        requiresApproval: boolean;
+        reason?: string;
+    };
+};
+
 export type IntentExecutionResult = {
     intent: Intent;
     transaction: Transaction;
@@ -112,6 +125,20 @@ export class FinanciaClient {
     ): Promise<Intent> {
         return this.request<Intent>(
             "/v1/intents",
+            {
+                method: "POST",
+                body: JSON.stringify(input),
+                idempotencyKey
+            }
+        );
+    }
+
+    async submitAgentIntent(
+        input: AgentIntentInput,
+        idempotencyKey?: string
+    ): Promise<AgentIntentResult> {
+        return this.request<AgentIntentResult>(
+            "/v1/agent/intents",
             {
                 method: "POST",
                 body: JSON.stringify(input),
