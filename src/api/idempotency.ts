@@ -112,7 +112,9 @@ export function idempotencyMiddleware(
     let stored = false;
 
     res.json = ((body: unknown) => {
-        if (!stored) {
+        // Do not permanently consume a key on server errors. A retry
+        // may be valid after the transient failure has been resolved.
+        if (!stored && res.statusCode < 500) {
             responses.set(storeKey, {
                 fingerprint: requestFingerprint,
                 status: res.statusCode,
