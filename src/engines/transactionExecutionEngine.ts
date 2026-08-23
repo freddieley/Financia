@@ -8,71 +8,55 @@ import type {
     ExternalSettlement
 } from "../types.ts";
 
-import type {
-    ExecutionContext
-} from "./executionContext.ts";
+import type { ExecutionContext } from "./executionContext.ts";
 
-import {
-    createTransaction
-} from "./transactionEngine.ts";
-
-import {
-    settleTransaction
-} from "./settlementEngine.ts";
-
-import {
-    reconcileSettlements
-} from "./reconciliationCoordinator.ts";
-
-import {
-    applySettlementResult
-} from "./transactionLifecycleEngine.ts";
-
-import {
-    createSettlementInstruction
-} from "./settlementInstructionEngine.ts";
-
-import {
-    executeSettlementInstruction
-} from "./settlementInstructionExecutionEngine.ts";
-
+import { createTransaction } from "./transactionEngine.ts";
+import { settleTransaction } from "./settlementEngine.ts";
+import { reconcileSettlements } from "./reconciliationCoordinator.ts";
+import { applySettlementResult } from "./transactionLifecycleEngine.ts";
+import { createSettlementInstruction } from "./settlementInstructionEngine.ts";
+import { executeSettlementInstruction } from "./settlementInstructionExecutionEngine.ts";
+import { transitionTransaction } from "./stateMachine.ts";
 
 export type TransactionExecutionResult = {
     success: boolean;
-
     transaction?: Transaction;
-
     settlement?: Settlement;
-
     settlementInstruction?: SettlementInstruction;
-
     externalSettlements?: ExternalSettlement[];
-
     reconciliation?: ReconciliationBatchResult;
-
     error?: string;
 };
 
+function setTransactionStatus(
+    transaction: Transaction,
+    nextStatus: NonNullable<Transaction["executionStatus"]>
+): string | undefined {
+    try {
+        const currentStatus = transaction.executionStatus ?? "created";
+        transaction.executionStatus =
+            transitionTransaction(currentStatus, nextStatus);
+        return undefined;
+    } catch (error) {
+        return error instanceof Error
+            ? error.message
+            : "Invalid transaction state transition";
+    }
+}
 
 export async function executeTransaction(
     intent: Intent,
     agent: Agent,
     context: ExecutionContext
 ): Promise<TransactionExecutionResult> {
-
-    // --------------------------------------------------
-    // 1. Create transaction
-    // --------------------------------------------------
-
-    const transactionResult =
-        createTransaction(
-            intent,
-            agent,
-            context.assets,
-            context.positions,
-            context.permissions,
-            context.policies
-        );
+    const transactionResult = createTransaction(
+        intent,
+        agent,
+        context.assets,
+        context.positions,
+        context.permissions,
+        context.policies
+    );
 
     if (!transactionResult.success) {
         return {
@@ -81,100 +65,92 @@ export async function executeTransaction(
         };
     }
 
-    const transaction =
-        transactionResult.transaction!;
+    const transaction = transactionResult.transaction!;
 
-
-    // --------------------------------------------------
-    // 2. Create settlement instruction
-    // --------------------------------------------------
-
-    const instructionResult =
-        createSettlementInstruction(transaction);
+    const instructionResult = createSettlementInstruction(transaction);
 
     if (!instructionResult.success) {
-
-        transaction.executionStatus = "failed";
+        const transitionError = setTransactionStatus(transaction, "failed");
 
         return {
             success: false,
             transaction,
-            error: instructionResult.error
+            error: transitionError ?? instructionResult.error
         };
     }
 
-    const settlementInstruction =
-        instructionResult.instruction!;
+    const settlementInstruction = instructionResult.instruction!;
 
-    transaction.executionStatus =
-        "instruction_created";
-
-    context.settlementInstructions.push(
-        settlementInstruction
+    let transitionError = setTransactionStatus(
+        transaction,
+        "instruction_created"
     );
 
-
-    // --------------------------------------------------
-    // 3. Execute external settlement instruction
-    // --------------------------------------------------
-
-    const instructionExecutionResult =
-        await executeSettlementInstruction(
-            settlementInstruction,
+    if (transitionError) {
+        return {
+            success: false,
             transaction,
-            context.representations,
-            context.adapters
-        );
+            settlementInstruction,
+            error: transitionError
+        };
+    }
+
+    context.settlementInstructions.push(settlementInstruction);
+
+    const instructionExecutionResult = await executeSettlementInstruction(
+        settlementInstruction,
+        transaction,
+        context.representations,
+        context.adapters
+    );
 
     const externalSettlements =
         instructionExecutionResult.settlements ?? [];
 
     if (externalSettlements.length > 0) {
+        context.externalSettlements.push(...externalSettlements);
 
-        context.externalSettlements.push(
-            ...externalSettlements
+        transitionError = setTransactionStatus(
+            transaction,
+            "externally_settled"
         );
 
-        transaction.executionStatus =
-            "externally_settled";
+        if (transitionError) {
+            return {
+                success: false,
+                transaction,
+                settlementInstruction,
+                externalSettlements,
+                error: transitionError
+            };
+        }
     }
 
     if (!instructionExecutionResult.success) {
-
-        /*
-         * The transaction exists, but external execution
-         * failed. It must never be considered settled.
-         */
-        transaction.executionStatus = "failed";
+        transitionError = setTransactionStatus(transaction, "failed");
 
         return {
             success: false,
             transaction,
             settlementInstruction,
             externalSettlements,
-            error:
-                instructionExecutionResult.error
+            error: transitionError ?? instructionExecutionResult.error
         };
     }
 
-
-    // --------------------------------------------------
-    // 4. Reconcile external evidence
-    // --------------------------------------------------
-
-    const reconciliation =
-        reconcileSettlements(
-            transaction,
-            externalSettlements,
-            context.representations
-        );
+    const reconciliation = reconcileSettlements(
+        transaction,
+        externalSettlements,
+        context.representations
+    );
 
     if (reconciliation.status !== "matched") {
-
-        transaction.executionStatus =
+        const nextStatus =
             reconciliation.status === "mismatched"
                 ? "failed"
                 : "pending";
+
+        transitionError = setTransactionStatus(transaction, nextStatus);
 
         return {
             success: false,
@@ -182,34 +158,37 @@ export async function executeTransaction(
             settlementInstruction,
             externalSettlements,
             reconciliation,
-            error:
+            error: transitionError ?? (
                 reconciliation.status === "partial"
                     ? "Settlement has only partially reconciled"
                     : reconciliation.status === "mismatched"
                         ? "Settlement does not reconcile with transaction"
                         : "Settlement could not be reconciled"
+            )
         };
     }
 
-    transaction.executionStatus =
-        "reconciled";
+    transitionError = setTransactionStatus(transaction, "reconciled");
 
-
-    // --------------------------------------------------
-    // 5. Apply internal settlement
-    // --------------------------------------------------
-
-    const settlementResult =
-        settleTransaction(
+    if (transitionError) {
+        return {
+            success: false,
             transaction,
-            context.positions,
-            context.ledger
-        );
+            settlementInstruction,
+            externalSettlements,
+            reconciliation,
+            error: transitionError
+        };
+    }
+
+    const settlementResult = settleTransaction(
+        transaction,
+        context.positions,
+        context.ledger
+    );
 
     if (!settlementResult.success) {
-
-        transaction.executionStatus =
-            "failed";
+        transitionError = setTransactionStatus(transaction, "failed");
 
         return {
             success: false,
@@ -217,31 +196,36 @@ export async function executeTransaction(
             settlementInstruction,
             externalSettlements,
             reconciliation,
-            error:
-                settlementResult.error
+            error: transitionError ?? settlementResult.error
         };
     }
 
-    const settlement =
-        settlementResult.settlement!;
+    const settlement = settlementResult.settlement!;
 
-    transaction.executionStatus =
-        "internally_settled";
+    transitionError = setTransactionStatus(
+        transaction,
+        "internally_settled"
+    );
 
-
-    // --------------------------------------------------
-    // 6. Apply lifecycle transition
-    // --------------------------------------------------
-
-    const lifecycleResult =
-        applySettlementResult(
+    if (transitionError) {
+        return {
+            success: false,
             transaction,
             settlement,
-            reconciliation
-        );
+            settlementInstruction,
+            externalSettlements,
+            reconciliation,
+            error: transitionError
+        };
+    }
+
+    const lifecycleResult = applySettlementResult(
+        transaction,
+        settlement,
+        reconciliation
+    );
 
     if (!lifecycleResult.success) {
-
         return {
             success: false,
             transaction: lifecycleResult.transaction,
@@ -252,11 +236,6 @@ export async function executeTransaction(
             error: lifecycleResult.error
         };
     }
-
-
-    // --------------------------------------------------
-    // 7. Complete
-    // --------------------------------------------------
 
     return {
         success: true,
