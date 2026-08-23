@@ -10,6 +10,10 @@ import {
     requestIdMiddleware
 } from "./requestId.ts";
 
+import {
+    idempotencyMiddleware
+} from "./idempotency.ts";
+
 import { healthRouter } from "./routes/health.ts";
 import { partiesRouter } from "./routes/parties.ts";
 import { accountsRouter } from "./routes/accounts.ts";
@@ -33,6 +37,7 @@ export function createApp() {
 
     app.use(express.json());
     app.use(requestIdMiddleware);
+    app.use(idempotencyMiddleware);
 
     app.use("/health", healthRouter);
 
