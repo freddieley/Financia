@@ -10,7 +10,7 @@ type TransactionTransitionMap = {
 const transactionTransitions: TransactionTransitionMap = {
     created: ["pending", "instruction_created", "failed"],
     pending: ["instruction_created", "failed"],
-    instruction_created: ["externally_settled", "failed"],
+    instruction_created: ["externally_settled", "pending", "failed"],
     externally_settled: ["reconciled", "pending", "failed"],
     reconciled: ["internally_settled", "failed"],
     internally_settled: ["settled", "failed"],
