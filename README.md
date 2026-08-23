@@ -5,9 +5,9 @@
  2. Intent API becomes genuinely first-class
  3. Idempotency keys ✓
  4. Formal transaction + intent state machines ✓
- 5. Storage interface ← now
- 6. External adapter interface/SDK
- 7. Realistic adapter simulation
+ 5. Storage interface ✓
+ 6. External adapter interface/SDK ✓
+ 7. Realistic adapter simulation ← now
  8. Tokenisation engine
  9. SDKs
 10. Agent protocol
