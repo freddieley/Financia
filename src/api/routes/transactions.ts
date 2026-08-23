@@ -3,6 +3,11 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
 
+import {
+    success,
+    failure
+} from "../response.ts";
+
 import type { Intent } from "../../types.ts";
 
 import {
@@ -51,20 +56,28 @@ transactionsRouter.post("/", async (req, res) => {
         typeof asset !== "string" ||
         typeof quantity !== "number"
     ) {
-        return res.status(400).json({
-            error:
-                "agent, from, to, asset, and quantity are required"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_TRANSACTION_REQUEST",
+                "agent, from, to, asset, and quantity are required",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
         !Number.isFinite(quantity) ||
         quantity <= 0
     ) {
-        return res.status(400).json({
-            error:
-                "quantity must be greater than zero"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_QUANTITY",
+                "quantity must be greater than zero",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const existingAgent = agents.find(
@@ -72,9 +85,14 @@ transactionsRouter.post("/", async (req, res) => {
     );
 
     if (!existingAgent) {
-        return res.status(404).json({
-            error: "Agent not found"
-        });
+        return res.status(404).json(
+            failure(
+                "AGENT_NOT_FOUND",
+                "Agent not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const intent: Intent = {
@@ -100,9 +118,15 @@ transactionsRouter.post("/", async (req, res) => {
     );
 
     if (!creation.success || !creation.transaction) {
-        return res.status(422).json({
-            error: creation.error
-        });
+        return res.status(422).json(
+            failure(
+                "TRANSACTION_CREATION_FAILED",
+                creation.error ??
+                    "Transaction creation failed",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     transactions.push(
@@ -181,24 +205,35 @@ transactionsRouter.post("/", async (req, res) => {
     }
 
     if (!execution.success) {
-        return res.status(422).json({
-            ...execution,
-            intent
-        });
+        return res.status(422).json(
+            failure(
+                "TRANSACTION_EXECUTION_FAILED",
+                execution.error ??
+                    "Transaction execution failed",
+                {
+                    intent,
+                    transaction:
+                        execution.transaction
+                },
+                res.locals.requestId
+            )
+        );
     }
 
-    return res.status(201).json({
-        transaction:
-            execution.transaction ??
-            creation.transaction,
-        intent,
-        settlement:
-            execution.settlement,
-        settlementInstruction:
-            execution.settlementInstruction,
-        reconciliation:
-            execution.reconciliation
-    });
+    return res.status(201).json(
+        success({
+            transaction:
+                execution.transaction ??
+                creation.transaction,
+            intent,
+            settlement:
+                execution.settlement,
+            settlementInstruction:
+                execution.settlementInstruction,
+            reconciliation:
+                execution.reconciliation
+        })
+    );
 });
 
 transactionsRouter.get("/", (req, res) => {
@@ -259,18 +294,28 @@ transactionsRouter.get("/", (req, res) => {
         (!Number.isInteger(numericLimit) ||
             numericLimit < 0)
     ) {
-        return res.status(400).json({
-            error: "Invalid limit"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_LIMIT",
+                "Invalid limit",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     if (
         !Number.isInteger(numericOffset) ||
         numericOffset < 0
     ) {
-        return res.status(400).json({
-            error: "Invalid offset"
-        });
+        return res.status(400).json(
+            failure(
+                "INVALID_OFFSET",
+                "Invalid offset",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const items =
@@ -281,12 +326,14 @@ transactionsRouter.get("/", (req, res) => {
                 numericOffset + numericLimit
             );
 
-    return res.json({
-        transactions: items,
-        total: result.length,
-        limit: numericLimit,
-        offset: numericOffset
-    });
+    return res.json(
+        success({
+            transactions: items,
+            total: result.length,
+            limit: numericLimit,
+            offset: numericOffset
+        })
+    );
 });
 
 transactionsRouter.get("/:id", (req, res) => {
@@ -296,9 +343,14 @@ transactionsRouter.get("/:id", (req, res) => {
     );
 
     if (!transaction) {
-        return res.status(404).json({
-            error: "Transaction not found"
-        });
+        return res.status(404).json(
+            failure(
+                "TRANSACTION_NOT_FOUND",
+                "Transaction not found",
+                undefined,
+                res.locals.requestId
+            )
+        );
     }
 
     const intent = intents.find(
@@ -344,18 +396,20 @@ transactionsRouter.get("/:id", (req, res) => {
                 )
         );
 
-    return res.json({
-        transaction,
-        intent,
-        settlement,
-        settlementInstruction,
-        externalSettlements:
-            transactionExternalSettlements,
-        reconciliations:
-            transactionReconciliations,
-        ledger:
-            transactionLedger
-    });
+    return res.json(
+        success({
+            transaction,
+            intent,
+            settlement,
+            settlementInstruction,
+            externalSettlements:
+                transactionExternalSettlements,
+            reconciliations:
+                transactionReconciliations,
+            ledger:
+                transactionLedger
+        })
+    );
 });
 
 transactionsRouter.post(
@@ -368,19 +422,28 @@ transactionsRouter.post(
         );
 
         if (!transaction) {
-            return res.status(404).json({
-                error: "Transaction not found"
-            });
+            return res.status(404).json(
+                failure(
+                    "TRANSACTION_NOT_FOUND",
+                    "Transaction not found",
+                    undefined,
+                    res.locals.requestId
+                )
+            );
         }
 
         if (
             transaction.executionStatus ===
             "settled"
         ) {
-            return res.status(409).json({
-                error:
-                    "Transaction has already been settled"
-            });
+            return res.status(409).json(
+                failure(
+                    "TRANSACTION_ALREADY_SETTLED",
+                    "Transaction has already been settled",
+                    undefined,
+                    res.locals.requestId
+                )
+            );
         }
 
         const intent = intents.find(
@@ -390,10 +453,14 @@ transactionsRouter.post(
         );
 
         if (!intent) {
-            return res.status(409).json({
-                error:
-                    "Original intent not found"
-            });
+            return res.status(409).json(
+                failure(
+                    "INTENT_NOT_FOUND",
+                    "Original intent not found",
+                    undefined,
+                    res.locals.requestId
+                )
+            );
         }
 
         const agent = agents.find(
@@ -402,10 +469,14 @@ transactionsRouter.post(
         );
 
         if (!agent) {
-            return res.status(409).json({
-                error:
-                    "Transaction agent no longer exists"
-            });
+            return res.status(409).json(
+                failure(
+                    "AGENT_NOT_FOUND",
+                    "Transaction agent no longer exists",
+                    undefined,
+                    res.locals.requestId
+                )
+            );
         }
 
         const result =
@@ -493,7 +564,16 @@ transactionsRouter.post(
         }
 
         if (!result.success) {
-            return res.status(422).json(result);
+            return res.status(422).json(
+                failure(
+                    "TRANSACTION_EXECUTION_FAILED",
+                    "Transaction execution failed",
+                    {
+                        result
+                    },
+                    res.locals.requestId
+                )
+            );
         }
 
         return res.json(result);

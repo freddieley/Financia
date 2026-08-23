@@ -2,6 +2,14 @@
 
 import express from "express";
 
+import {
+    failure
+} from "./response.ts";
+
+import {
+    requestIdMiddleware
+} from "./requestId.ts";
+
 import { healthRouter } from "./routes/health.ts";
 import { partiesRouter } from "./routes/parties.ts";
 import { accountsRouter } from "./routes/accounts.ts";
@@ -24,6 +32,7 @@ export function createApp() {
     const app = express();
 
     app.use(express.json());
+    app.use(requestIdMiddleware);
 
     app.use("/health", healthRouter);
 
@@ -54,9 +63,14 @@ export function createApp() {
     );
 
     app.use((req, res) => {
-        res.status(404).json({
-            error: "Resource not found"
-        });
+        return res.status(404).json(
+            failure(
+                "RESOURCE_NOT_FOUND",
+                `Resource ${req.method} ${req.path} was not found`,
+                undefined,
+                res.locals.requestId
+            )
+        );
     });
 
     app.use(
@@ -68,9 +82,14 @@ export function createApp() {
         ) => {
             console.error(error);
 
-            res.status(500).json({
-                error: "Internal server error"
-            });
+            return res.status(500).json(
+                failure(
+                    "INTERNAL_SERVER_ERROR",
+                    "An unexpected error occurred",
+                    undefined,
+                    res.locals.requestId
+                )
+            );
         }
     );
 
