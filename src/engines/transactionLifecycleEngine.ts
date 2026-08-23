@@ -4,6 +4,9 @@ import type {
     ReconciliationBatchResult
 } from "../types.ts";
 
+import {
+    transitionTransaction
+} from "./stateMachine.ts";
 
 export type TransactionLifecycleResult = {
     success: boolean;
@@ -11,16 +14,16 @@ export type TransactionLifecycleResult = {
     error?: string;
 };
 
-
 export function applySettlementResult(
     transaction: Transaction,
     settlement: Settlement,
     reconciliation: ReconciliationBatchResult
 ): TransactionLifecycleResult {
+    const currentStatus = transaction.executionStatus ?? "created";
 
     if (
-        transaction.executionStatus === "settled" ||
-        transaction.executionStatus === "failed"
+        currentStatus === "settled" ||
+        currentStatus === "failed"
     ) {
         return {
             success: false,
@@ -46,53 +49,71 @@ export function applySettlementResult(
     }
 
     switch (reconciliation.status) {
+        case "matched": {
+            try {
+                let status = currentStatus;
 
-        case "matched":
+                if (status === "pending") {
+                    status = transitionTransaction(status, "instruction_created");
+                    status = transitionTransaction(status, "externally_settled");
+                    status = transitionTransaction(status, "reconciled");
+                    status = transitionTransaction(status, "internally_settled");
+                } else if (status === "externally_settled") {
+                    status = transitionTransaction(status, "reconciled");
+                    status = transitionTransaction(status, "internally_settled");
+                } else if (status === "reconciled") {
+                    status = transitionTransaction(status, "internally_settled");
+                }
 
-            transaction.executionStatus = "settled";
+                status = transitionTransaction(status, "settled");
+                transaction.executionStatus = status;
+                transaction.settledAt = settlement.timestamp;
 
-            transaction.settledAt =
-                settlement.timestamp;
-
-            return {
-                success: true,
-                transaction
-            };
-
+                return {
+                    success: true,
+                    transaction
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    transaction,
+                    error: error instanceof Error
+                        ? error.message
+                        : "Invalid transaction state transition"
+                };
+            }
+        }
 
         case "mismatched":
-
-            transaction.executionStatus = "failed";
+            try {
+                transaction.executionStatus =
+                    transitionTransaction(currentStatus, "failed");
+            } catch (error) {
+                return {
+                    success: false,
+                    transaction,
+                    error: error instanceof Error
+                        ? error.message
+                        : "Invalid transaction state transition"
+                };
+            }
 
             return {
                 success: false,
                 transaction,
-                error:
-                    "Settlement does not reconcile with transaction"
+                error: "Settlement does not reconcile with transaction"
             };
-
 
         case "partial":
-
-            transaction.executionStatus = "pending";
-
-            return {
-                success: false,
-                transaction,
-                error:
-                    "Transaction has only partially settled"
-            };
-
-
         case "unresolved":
-
             transaction.executionStatus = "pending";
 
             return {
                 success: false,
                 transaction,
-                error:
-                    "Settlement could not be reconciled"
+                error: reconciliation.status === "partial"
+                    ? "Transaction has only partially settled"
+                    : "Settlement could not be reconciled"
             };
     }
 }
