@@ -21,6 +21,7 @@ import { assetsRouter } from "./routes/assets.ts";
 import { representationsRouter } from "./routes/representations.ts";
 import { permissionsRouter } from "./routes/permissions.ts";
 import { agentsRouter } from "./routes/agents.ts";
+import { agentProtocolRouter } from "./routes/agentProtocol.ts";
 import { policiesRouter } from "./routes/policies.ts";
 import { transactionsRouter } from "./routes/transactions.ts";
 import { intentsRouter } from "./routes/intents.ts";
@@ -48,6 +49,7 @@ export function createApp() {
     app.use("/v1/positions", positionsRouter);
     app.use("/v1/permissions", permissionsRouter);
     app.use("/v1/agents", agentsRouter);
+    app.use("/v1/agent", agentProtocolRouter);
     app.use("/v1/policies", policiesRouter);
     app.use("/v1/intents", intentsRouter);
     app.use("/v1/transactions", transactionsRouter);
