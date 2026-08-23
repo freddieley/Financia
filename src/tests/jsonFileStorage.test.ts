@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+    existsSync,
+    mkdtempSync,
+    readFileSync,
+    rmSync,
+    writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -87,7 +93,6 @@ describe("JsonFileStorage", () => {
 
     it("rejects malformed persisted state", () => {
         const { path } = createStorage();
-        const { writeFileSync } = require("node:fs") as typeof import("node:fs");
 
         writeFileSync(path, "not-json", "utf8");
 
