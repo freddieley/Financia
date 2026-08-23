@@ -14,7 +14,6 @@ import {
     assets,
     intents
 } from "../../store/memoryStore.ts";
-import { formatSyntaxKind } from "typescript/unstable/ast";
 
 export const intentsRouter = Router();
 

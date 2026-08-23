@@ -110,7 +110,7 @@ agentsRouter.post("/", (req, res) => {
     ) {
         return res.status(404).json(
             failure(
-                "PERMISSION_NOT_FOUND",
+                "POLICY_NOT_FOUND",
                 "One or more policies not found",
                 undefined,
                 res.locals.requestId
