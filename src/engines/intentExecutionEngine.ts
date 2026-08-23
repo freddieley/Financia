@@ -4,33 +4,22 @@ import type {
     Transaction
 } from "../types.ts";
 
-import type {
-    ExecutionContext
-} from "./executionContext.ts";
-
-import {
-    executeTransaction
-} from "./transactionExecutionEngine.ts";
-
+import type { ExecutionContext } from "./executionContext.ts";
+import { executeTransaction } from "./transactionExecutionEngine.ts";
+import { transitionIntent } from "./stateMachine.ts";
 
 export type IntentExecutionResult =
     | {
         success: true;
-
         intent: Intent;
-
         transaction: Transaction;
     }
     | {
         success: false;
-
         error: string;
-
         intent?: Intent;
-
         transaction?: Transaction;
     };
-
 
 export async function executeIntent(
     intentId: string,
@@ -38,15 +27,7 @@ export async function executeIntent(
     agents: Agent[],
     context: ExecutionContext
 ): Promise<IntentExecutionResult> {
-
-    // --------------------------------------------------
-    // 1. Find intent
-    // --------------------------------------------------
-
-    const intent = intents.find(
-        candidate =>
-            candidate.id === intentId
-    );
+    const intent = intents.find(candidate => candidate.id === intentId);
 
     if (!intent) {
         return {
@@ -55,32 +36,17 @@ export async function executeIntent(
         };
     }
 
+    const currentStatus = intent.status ?? "pending";
 
-    // --------------------------------------------------
-    // 2. Prevent duplicate execution
-    // --------------------------------------------------
-
-    if (
-        intent.status === "executed" ||
-        intent.status === "failed"
-    ) {
+    if (currentStatus === "executed" || currentStatus === "failed") {
         return {
             success: false,
             intent,
-            error:
-                "Intent has already been consumed"
+            error: "Intent has already been consumed"
         };
     }
 
-
-    // --------------------------------------------------
-    // 3. Find agent
-    // --------------------------------------------------
-
-    const agent = agents.find(
-        candidate =>
-            candidate.id === intent.agent
-    );
+    const agent = agents.find(candidate => candidate.id === intent.agent);
 
     if (!agent) {
         return {
@@ -90,86 +56,63 @@ export async function executeIntent(
         };
     }
 
-
-    // --------------------------------------------------
-    // 4. Execute transaction
-    //
-    // The transaction engine is responsible for:
-    // - asset validation
-    // - position validation
-    // - permission validation
-    // - policy validation
-    // - transaction construction
-    // --------------------------------------------------
-
-    const result =
-        await executeTransaction(
-            intent,
-            agent,
-            context
-        );
-
-
-    // --------------------------------------------------
-    // 5. Transaction creation failed
-    //
-    // No transaction means the intent was never consumed.
-    // --------------------------------------------------
+    const result = await executeTransaction(
+        intent,
+        agent,
+        context
+    );
 
     if (!result.transaction) {
-
-        intent.status = "pending";
+        intent.status = currentStatus;
 
         return {
             success: false,
             intent,
-            error:
-                result.error ??
-                "Transaction creation failed"
+            error: result.error ?? "Transaction creation failed"
         };
     }
 
-
-    // --------------------------------------------------
-    // 6. A transaction now exists.
-    //
-    // At this point the intent has been consumed,
-    // even if downstream settlement/execution failed.
-    // --------------------------------------------------
-
-    intent.transactionId =
-        result.transaction.id;
-
-    intent.executedAt =
-        new Date().toISOString();
-
+    intent.transactionId = result.transaction.id;
+    intent.executedAt = new Date().toISOString();
 
     if (!result.success) {
-
-        intent.status = "failed";
+        try {
+            intent.status = transitionIntent(currentStatus, "failed");
+        } catch (error) {
+            return {
+                success: false,
+                intent,
+                transaction: result.transaction,
+                error: error instanceof Error
+                    ? error.message
+                    : "Invalid intent state transition"
+            };
+        }
 
         return {
             success: false,
             intent,
-            transaction:
-                result.transaction,
-            error:
-                result.error ??
-                "Transaction execution failed"
+            transaction: result.transaction,
+            error: result.error ?? "Transaction execution failed"
         };
     }
 
-
-    // --------------------------------------------------
-    // 7. Fully successful execution
-    // --------------------------------------------------
-
-    intent.status = "executed";
+    try {
+        intent.status = transitionIntent(currentStatus, "executed");
+    } catch (error) {
+        return {
+            success: false,
+            intent,
+            transaction: result.transaction,
+            error: error instanceof Error
+                ? error.message
+                : "Invalid intent state transition"
+        };
+    }
 
     return {
         success: true,
         intent,
-        transaction:
-            result.transaction
+        transaction: result.transaction
     };
 }
