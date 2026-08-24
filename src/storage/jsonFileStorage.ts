@@ -280,10 +280,12 @@ export class JsonFileStorage implements Storage {
         };
         const contents = JSON.stringify(document, null, 2);
         let lockHandle: number | undefined;
+        let temporaryWritten = false;
 
         try {
             lockHandle = this.acquireLock(lockPath);
             writeFileSync(temporaryPath, contents, "utf8");
+            temporaryWritten = true;
 
             // Preserve the last known-good document before replacing the live file.
             if (existsSync(this.filePath)) {
@@ -291,15 +293,26 @@ export class JsonFileStorage implements Storage {
             }
 
             renameSync(temporaryPath, this.filePath);
+            temporaryWritten = false;
         } finally {
-            if (lockHandle !== undefined) {
-                closeSync(lockHandle);
+            if (temporaryWritten) {
+                try {
+                    unlinkSync(temporaryPath);
+                } catch {
+                    // The temporary file may already have been removed by the OS.
+                }
             }
 
-            try {
-                unlinkSync(lockPath);
-            } catch {
-                // The lock may already have been removed by a stale-lock recovery.
+            // Only the process that successfully acquired the lock may remove it.
+            // In particular, a timeout must never delete another writer's lock.
+            if (lockHandle !== undefined) {
+                closeSync(lockHandle);
+
+                try {
+                    unlinkSync(lockPath);
+                } catch {
+                    // The lock may already have been removed by stale-lock recovery.
+                }
             }
         }
     }
