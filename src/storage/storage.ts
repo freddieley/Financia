@@ -1,11 +1,16 @@
 import type {
+    Party,
+    Account,
     Asset,
     Position,
     Permission,
     Policy,
+    Agent,
     LedgerEntry,
     AssetRepresentation,
+    ExternalTransaction,
     ExternalSettlement,
+    Reconciliation,
     SettlementInstruction,
     Transaction,
     Settlement,
@@ -13,13 +18,18 @@ import type {
 } from "../types.ts";
 
 export type StorageCollections = {
+    parties: Party;
+    accounts: Account;
     assets: Asset;
     positions: Position;
     permissions: Permission;
     policies: Policy;
+    agents: Agent;
     ledger: LedgerEntry;
     representations: AssetRepresentation;
+    externalTransactions: ExternalTransaction;
     externalSettlements: ExternalSettlement;
+    reconciliations: Reconciliation;
     settlementInstructions: SettlementInstruction;
     transactions: Transaction;
     settlements: Settlement;
