@@ -7,13 +7,18 @@ import type {
 } from "./storage.ts";
 
 const COLLECTIONS: (keyof StorageCollections)[] = [
+    "parties",
+    "accounts",
     "assets",
     "positions",
     "permissions",
     "policies",
+    "agents",
     "ledger",
     "representations",
+    "externalTransactions",
     "externalSettlements",
+    "reconciliations",
     "settlementInstructions",
     "transactions",
     "settlements",
@@ -44,13 +49,18 @@ function getCollectionId(
 
 function emptyState(): PersistedState {
     return {
+        parties: [],
+        accounts: [],
         assets: [],
         positions: [],
         permissions: [],
         policies: [],
+        agents: [],
         ledger: [],
         representations: [],
+        externalTransactions: [],
         externalSettlements: [],
+        reconciliations: [],
         settlementInstructions: [],
         transactions: [],
         settlements: [],
