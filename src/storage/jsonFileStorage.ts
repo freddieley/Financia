@@ -1,10 +1,19 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+    copyFileSync,
+    existsSync,
+    mkdirSync,
+    readFileSync,
+    renameSync,
+    writeFileSync
+} from "node:fs";
 import { dirname } from "node:path";
 
 import type {
     Storage,
     StorageCollections
 } from "./storage.ts";
+
+const STORAGE_VERSION = 1;
 
 const COLLECTIONS: (keyof StorageCollections)[] = [
     "parties",
@@ -28,6 +37,11 @@ const COLLECTIONS: (keyof StorageCollections)[] = [
 
 type PersistedState = {
     [K in keyof StorageCollections]: StorageCollections[K][];
+};
+
+type PersistedDocument = {
+    version: number;
+    state: PersistedState;
 };
 
 function getCollectionId(
@@ -161,9 +175,21 @@ export class JsonFileStorage implements Storage {
 
             const record = parsed as Record<string, unknown>;
             const state = emptyState();
+            const documentState =
+                "state" in record &&
+                record.state &&
+                typeof record.state === "object"
+                    ? (record.state as Record<string, unknown>)
+                    : record;
+
+            if ("version" in record && record.version !== STORAGE_VERSION) {
+                throw new Error(
+                    `Unsupported storage version '${String(record.version)}'; expected '${STORAGE_VERSION}'`
+                );
+            }
 
             for (const collection of COLLECTIONS) {
-                const value = record[collection];
+                const value = documentState[collection];
 
                 if (value !== undefined) {
                     if (!Array.isArray(value)) {
@@ -194,9 +220,22 @@ export class JsonFileStorage implements Storage {
         mkdirSync(directory, { recursive: true });
 
         const temporaryPath = `${this.filePath}.tmp`;
-        const contents = JSON.stringify(this.state, null, 2);
+        const backupPath = `${this.filePath}.bak`;
+        const document: PersistedDocument = {
+            version: STORAGE_VERSION,
+            state: this.state
+        };
+        const contents = JSON.stringify(document, null, 2);
 
         writeFileSync(temporaryPath, contents, "utf8");
+
+        // Preserve the last known-good document before replacing the live file.
+        // The live write remains atomic because readers only ever see either the
+        // old file or the completed temporary file after rename.
+        if (existsSync(this.filePath)) {
+            copyFileSync(this.filePath, backupPath);
+        }
+
         renameSync(temporaryPath, this.filePath);
     }
 }
