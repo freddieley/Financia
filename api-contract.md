@@ -2,9 +2,7 @@
 API
  │
  ├── success response
- │
  └── error response
-       │
        ├── code
        ├── message
        ├── details
@@ -30,6 +28,20 @@ OR
     }
 }
 ```
+
+## Authentication
+
+Versioned application endpoints under `/v1/*` support deployment-scoped bearer API-key authentication.
+
+```http
+Authorization: Bearer <FINANCIA_API_KEY>
+```
+
+When `FINANCIA_API_KEY` is configured, requests without the key or with an invalid key return HTTP `401` with error code `AUTHENTICATION_REQUIRED`.
+
+Health endpoints under `/health/*` remain unauthenticated so infrastructure can perform liveness/readiness checks without application credentials.
+
+For production server operation, `FINANCIA_API_KEY` is mandatory. Local development and tests may omit it.
 
 ## Idempotency
 
@@ -79,5 +91,6 @@ Supported runtime configuration is documented in `.env.example`:
 - `PORT` — HTTP port, default `3000`.
 - `SHUTDOWN_TIMEOUT_MS` — graceful shutdown limit, default `10000` milliseconds.
 - `FINANCIA_STORAGE_PATH` — durable JSON storage path, default `./data/financia.json`.
+- `FINANCIA_API_KEY` — deployment-scoped bearer credential; required in production.
 
 The supported Node.js runtime is `>=22 <27`.
