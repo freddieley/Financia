@@ -17,15 +17,33 @@
 
 Financia uses the shared `Storage` abstraction for application state and a durable JSON storage backend in normal server operation. The JSON backend uses atomic temporary-file replacement so a completed write replaces the previous state rather than partially overwriting it.
 
-Persisted documents now carry an explicit storage version and the previous live document is retained as a `.bak` recovery copy before replacement. The loader remains backward-compatible with the original unversioned collection-only format, while rejecting unknown future storage versions rather than silently interpreting them.
+Persisted documents carry an explicit storage version and the previous live document is retained as a `.bak` recovery copy before replacement. The loader remains backward-compatible with the original unversioned collection-only format, while rejecting unknown future storage versions rather than silently interpreting them.
+
+Durable writes are protected by a filesystem lock with bounded waiting and stale-lock recovery. This serializes writers and prevents concurrent processes from replacing the live document simultaneously. The lock is deliberately small and local to the JSON backend; production deployments that require multi-node transactional storage should move to a database-backed `Storage` implementation rather than sharing a filesystem between nodes.
 
 The same durable backend stores idempotency records, so replay protection survives process restarts rather than relying on a process-local map. Tests use the in-memory storage implementation.
 
-The remaining production-hardening work is focused on operational guarantees around durable backend concurrency, API lifecycle behavior, observability, and deployment readiness.
+### Operational lifecycle
+
+The API exposes separate liveness and readiness endpoints:
+
+```http
+GET /health/live
+GET /health/ready
+GET /health/metrics
+```
+
+Liveness answers whether the process can serve HTTP. Readiness additionally verifies the storage backend and returns `503 SERVICE_NOT_READY` during graceful shutdown, allowing a load balancer or orchestrator to drain the instance before it exits.
+
+The server handles `SIGTERM` and `SIGINT`, stops advertising readiness, waits for active HTTP connections to close, and applies a bounded shutdown timeout via `SHUTDOWN_TIMEOUT_MS` (default `10000` ms).
+
+Runtime configuration is documented in `.env.example`. The supported Node runtime is `>=22 <27`, matching the CI environment.
+
+The remaining production-hardening work is focused on deployment topology, durable backend observability, database-backed storage, and final security/operational review.
 
 ### Observability
 
-The API now records lightweight process-local request metrics and exposes them through:
+The API records lightweight process-local request metrics and exposes them through:
 
 ```http
 GET /health/metrics
