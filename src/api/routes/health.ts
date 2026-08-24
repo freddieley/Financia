@@ -10,6 +10,10 @@ import {
 } from "../metrics.ts";
 
 import {
+    isAcceptingRequests
+} from "../lifecycle.ts";
+
+import {
     storage
 } from "../../store/memoryStore.ts";
 
@@ -36,8 +40,21 @@ healthRouter.get("/live", (_req, res) => {
     );
 });
 
-// Readiness also verifies that the configured storage backend is usable.
+// Readiness verifies both the storage backend and application lifecycle.
+// During graceful shutdown the process remains alive long enough to finish
+// in-flight requests, but new traffic should be removed from service.
 healthRouter.get("/ready", (_req, res) => {
+    if (!isAcceptingRequests()) {
+        return res.status(503).json(
+            failure(
+                "SERVICE_NOT_READY",
+                "Financia is shutting down",
+                { reason: "shutdown_in_progress" },
+                res.locals.requestId
+            )
+        );
+    }
+
     try {
         storage.list("parties");
 
