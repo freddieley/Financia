@@ -2,8 +2,11 @@ import dotenv from "dotenv";
 
 import { createApp } from "./api/app.ts";
 import { beginShutdown } from "./api/lifecycle.ts";
+import { requireProductionApiKey } from "./api/auth.ts";
 
 dotenv.config();
+
+requireProductionApiKey();
 
 const app = createApp();
 
