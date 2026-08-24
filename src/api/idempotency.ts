@@ -12,15 +12,13 @@ import {
     failure
 } from "./response.ts";
 
+import {
+    storage
+} from "../store/memoryStore.ts";
 
-type StoredResponse = {
-    fingerprint: string;
-    status: number;
-    body: unknown;
-};
-
-
-const responses = new Map<string, StoredResponse>();
+import type {
+    IdempotencyRecord
+} from "../storage/storage.ts";
 
 
 function fingerprint(
@@ -39,7 +37,7 @@ function fingerprint(
 
 
 export function clearIdempotencyStore(): void {
-    responses.clear();
+    storage.replaceAll("idempotency", []);
 }
 
 
@@ -82,7 +80,7 @@ export function idempotencyMiddleware(
 
     const storeKey = `${req.method}:${req.originalUrl}:${key}`;
     const requestFingerprint = fingerprint(req);
-    const existing = responses.get(storeKey);
+    const existing = storage.get("idempotency", storeKey);
 
     if (existing) {
         if (existing.fingerprint !== requestFingerprint) {
@@ -115,11 +113,14 @@ export function idempotencyMiddleware(
         // Do not permanently consume a key on server errors. A retry
         // may be valid after the transient failure has been resolved.
         if (!stored && res.statusCode < 500) {
-            responses.set(storeKey, {
+            const record: IdempotencyRecord = {
+                id: storeKey,
                 fingerprint: requestFingerprint,
                 status: res.statusCode,
                 body
-            });
+            };
+
+            storage.insert("idempotency", record);
             stored = true;
         }
 
