@@ -82,6 +82,27 @@ describe("JsonFileStorage", () => {
         expect(new JsonFileStorage(path).get("assets", "asset_001")).toBeUndefined();
     });
 
+    it("persists idempotency records across storage instances", () => {
+        const { path } = createStorage();
+        const first = new JsonFileStorage(path);
+
+        first.insert("idempotency", {
+            id: "POST:/v1/parties:key-1",
+            fingerprint: "fingerprint-1",
+            status: 201,
+            body: {
+                success: true,
+                data: {
+                    id: "party_001"
+                }
+            }
+        });
+
+        const second = new JsonFileStorage(path);
+        expect(second.get("idempotency", "POST:/v1/parties:key-1"))
+            .toEqual(first.get("idempotency", "POST:/v1/parties:key-1"));
+    });
+
     it("preserves empty collections when loading a new file", () => {
         const { path } = createStorage();
         const storage = new JsonFileStorage(path);
@@ -89,6 +110,7 @@ describe("JsonFileStorage", () => {
         expect(storage.list("assets")).toEqual([]);
         expect(storage.list("transactions")).toEqual([]);
         expect(storage.list("intents")).toEqual([]);
+        expect(storage.list("idempotency")).toEqual([]);
     });
 
     it("rejects malformed persisted state", () => {
