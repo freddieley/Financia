@@ -117,6 +117,14 @@ export class JsonFileStorage implements Storage {
         return true;
     }
 
+    replaceAll<K extends keyof StorageCollections>(
+        collection: K,
+        values: StorageCollections[K][]
+    ): void {
+        this.state[collection] = [...values];
+        this.persist();
+    }
+
     remove<K extends keyof StorageCollections>(
         collection: K,
         id: string
