@@ -89,6 +89,36 @@ export function createApp() {
             res: express.Response,
             _next: express.NextFunction
         ) => {
+            const errorType =
+                typeof error === "object" &&
+                error !== null &&
+                "type" in error &&
+                typeof error.type === "string"
+                    ? error.type
+                    : undefined;
+
+            if (errorType === "entity.too.large") {
+                return res.status(413).json(
+                    failure(
+                        "REQUEST_BODY_TOO_LARGE",
+                        "Request body exceeds the 1 MiB limit",
+                        undefined,
+                        res.locals.requestId
+                    )
+                );
+            }
+
+            if (errorType === "entity.parse.failed") {
+                return res.status(400).json(
+                    failure(
+                        "INVALID_JSON",
+                        "Request body contains invalid JSON",
+                        undefined,
+                        res.locals.requestId
+                    )
+                );
+            }
+
             console.error(error);
 
             return res.status(500).json(
