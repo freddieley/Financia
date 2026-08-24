@@ -6,6 +6,10 @@ import {
 } from "../response.ts";
 
 import {
+    getApiMetrics
+} from "../metrics.ts";
+
+import {
     storage
 } from "../../store/memoryStore.ts";
 
@@ -59,4 +63,9 @@ healthRouter.get("/ready", (_req, res) => {
             )
         );
     }
+});
+
+// Runtime metrics are intentionally read-only and contain no financial data.
+healthRouter.get("/metrics", (_req, res) => {
+    return res.status(200).json(success(getApiMetrics()));
 });
