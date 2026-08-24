@@ -18,6 +18,10 @@ import {
     apiMetricsMiddleware
 } from "./metrics.ts";
 
+import {
+    securityHeadersMiddleware
+} from "./security.ts";
+
 import { healthRouter } from "./routes/health.ts";
 import { partiesRouter } from "./routes/parties.ts";
 import { accountsRouter } from "./routes/accounts.ts";
@@ -39,6 +43,9 @@ import { externalSettlementsRouter } from "./routes/externalSettlements.ts";
 
 export function createApp() {
     const app = express();
+
+    app.disable("x-powered-by");
+    app.use(securityHeadersMiddleware);
 
     // Keep request bodies bounded so malformed or unexpectedly large payloads
     // cannot consume unbounded memory before reaching a route.
