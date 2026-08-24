@@ -15,14 +15,11 @@
 
 ### Durable storage
 
-Financia now includes a durable JSON storage backend implementing the existing
-`Storage` interface. It uses atomic temporary-file replacement so a completed
-write replaces the previous state rather than partially overwriting it.
+Financia uses the shared `Storage` abstraction for application state and a durable JSON storage backend in normal server operation. The JSON backend uses atomic temporary-file replacement so a completed write replaces the previous state rather than partially overwriting it.
 
-The backend is intentionally separate from the current in-memory API wiring;
-the next production-hardening step is migrating application state behind the
-storage interface rather than having routes depend directly on in-memory
-collections.
+The same durable backend now stores idempotency records, so replay protection survives process restarts rather than relying on a process-local map. Tests use the in-memory storage implementation.
+
+The remaining production-hardening work is focused on operational guarantees around the durable backend, API lifecycle behavior, concurrency, observability, and deployment readiness.
 
 ### Agent protocol
 
@@ -32,9 +29,7 @@ Agents can submit intents through the protocol endpoint:
 POST /v1/agent/intents
 ```
 
-The protocol validates the agent, accounts, and asset, then evaluates the
-agent's permissions and policies before an intent is created. Authorization
-results are returned alongside the created intent.
+The protocol validates the agent, accounts, and asset, then evaluates the agent's permissions and policies before an intent is created. Authorization results are returned alongside the created intent.
 
 An unauthorized request is rejected with `AGENT_INTENT_NOT_AUTHORIZED`.
 Policy-based approval requirements are surfaced as `requiresApproval: true`
