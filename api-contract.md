@@ -47,5 +47,7 @@ Rules:
 - Reusing a key with a different request returns HTTP `409` with error code `IDEMPOTENCY_KEY_REUSED`.
 - Keys must contain between 1 and 255 characters.
 - Invalid keys return HTTP `400` with error code `INVALID_IDEMPOTENCY_KEY`.
+- Successful and client-error responses are persisted in the configured storage backend so replay survives process restarts.
+- Responses with HTTP status `500` or greater are not persisted, allowing a retry after a transient server failure.
 
-The current implementation stores idempotency records in process memory. A durable storage-backed implementation is required before horizontally scaling production instances.
+Production uses the configured durable storage backend, while tests use the in-memory backend. The storage abstraction is therefore shared by idempotency and application state rather than maintaining a separate process-local idempotency map.
