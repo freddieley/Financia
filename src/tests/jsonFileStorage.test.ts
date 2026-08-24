@@ -4,6 +4,7 @@ import {
     mkdtempSync,
     readFileSync,
     rmSync,
+    utimesSync,
     writeFileSync
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -47,7 +48,9 @@ describe("JsonFileStorage", () => {
         first.insert("assets", asset);
 
         expect(existsSync(path)).toBe(true);
-        expect(JSON.parse(readFileSync(path, "utf8")).assets).toHaveLength(1);
+        const document = JSON.parse(readFileSync(path, "utf8"));
+        expect(document.version).toBe(1);
+        expect(document.state.assets).toHaveLength(1);
 
         const second = new JsonFileStorage(path);
 
@@ -121,5 +124,28 @@ describe("JsonFileStorage", () => {
         expect(() => new JsonFileStorage(path)).toThrow(
             "Failed to load Financia storage"
         );
+    });
+
+    it("recovers a stale writer lock", () => {
+        const { path } = createStorage();
+        const lockPath = `${path}.lock`;
+        writeFileSync(lockPath, "stale", "utf8");
+
+        const staleTime = new Date(Date.now() - 60_000);
+        utimesSync(lockPath, staleTime, staleTime);
+
+        const storage = new JsonFileStorage(path);
+        storage.insert("assets", {
+            id: "asset_002",
+            type: "cash",
+            issuer: "issuer_002",
+            quantity: 500,
+            currency: "GBP",
+            metadata: {}
+        });
+
+        expect(existsSync(lockPath)).toBe(false);
+        expect(new JsonFileStorage(path).get("assets", "asset_002"))
+            .toBeDefined();
     });
 });
