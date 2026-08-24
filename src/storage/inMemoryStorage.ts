@@ -25,13 +25,18 @@ export class InMemoryStorage implements Storage {
     private readonly collections: {
         [K in keyof StorageCollections]: StorageCollections[K][];
     } = {
+        parties: [],
+        accounts: [],
         assets: [],
         positions: [],
         permissions: [],
         policies: [],
+        agents: [],
         ledger: [],
         representations: [],
+        externalTransactions: [],
         externalSettlements: [],
+        reconciliations: [],
         settlementInstructions: [],
         transactions: [],
         settlements: [],
