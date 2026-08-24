@@ -1,7 +1,9 @@
 {
   "scripts": {
     "dev": "node src/server.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "typecheck": "tsc --noEmit"
   },
   "type": "module",
   "dependencies": {
