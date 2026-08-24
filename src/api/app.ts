@@ -36,7 +36,9 @@ import { externalSettlementsRouter } from "./routes/externalSettlements.ts";
 export function createApp() {
     const app = express();
 
-    app.use(express.json());
+    // Keep request bodies bounded so malformed or unexpectedly large payloads
+    // cannot consume unbounded memory before reaching a route.
+    app.use(express.json({ limit: "1mb" }));
     app.use(requestIdMiddleware);
     app.use(idempotencyMiddleware);
 
