@@ -1,12 +1,15 @@
 import dotenv from "dotenv";
 
 import { createApp } from "./api/app.ts";
+import { beginShutdown } from "./api/lifecycle.ts";
 
 dotenv.config();
 
 const app = createApp();
 
 const port = Number(process.env.PORT) || 3000;
+const shutdownTimeoutMs = Number(process.env.SHUTDOWN_TIMEOUT_MS) || 10_000;
+
 const server = app.listen(port, () => {
     console.log(
         `Financia API listening on port ${port}`
@@ -21,9 +24,23 @@ function shutdown(signal: string): void {
     }
 
     shuttingDown = true;
+    beginShutdown();
+
     console.log(`Financia API received ${signal}; shutting down`);
 
+    const forceExitTimer = setTimeout(() => {
+        console.error(
+            `Financia API shutdown exceeded ${shutdownTimeoutMs}ms; forcing exit`
+        );
+        process.exitCode = 1;
+        process.exit();
+    }, shutdownTimeoutMs);
+
+    forceExitTimer.unref();
+
     server.close(error => {
+        clearTimeout(forceExitTimer);
+
         if (error) {
             console.error("Financia API failed to close cleanly", error);
             process.exitCode = 1;
