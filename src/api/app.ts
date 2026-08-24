@@ -22,6 +22,10 @@ import {
     securityHeadersMiddleware
 } from "./security.ts";
 
+import {
+    apiKeyMiddleware
+} from "./auth.ts";
+
 import { healthRouter } from "./routes/health.ts";
 import { partiesRouter } from "./routes/parties.ts";
 import { accountsRouter } from "./routes/accounts.ts";
@@ -54,7 +58,14 @@ export function createApp() {
     app.use(apiMetricsMiddleware);
     app.use(idempotencyMiddleware);
 
+    // Health endpoints remain unauthenticated so orchestrators can probe the
+    // process even when credentials are unavailable or have expired.
     app.use("/health", healthRouter);
+
+    // All versioned application routes are protected when FINANCIA_API_KEY is
+    // configured. Local/test environments can omit it for backwards-compatible
+    // development ergonomics.
+    app.use("/v1", apiKeyMiddleware);
 
     app.use("/v1/parties", partiesRouter);
     app.use("/v1/accounts", accountsRouter);
