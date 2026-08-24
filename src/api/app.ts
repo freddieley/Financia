@@ -14,6 +14,10 @@ import {
     idempotencyMiddleware
 } from "./idempotency.ts";
 
+import {
+    apiMetricsMiddleware
+} from "./metrics.ts";
+
 import { healthRouter } from "./routes/health.ts";
 import { partiesRouter } from "./routes/parties.ts";
 import { accountsRouter } from "./routes/accounts.ts";
@@ -40,6 +44,7 @@ export function createApp() {
     // cannot consume unbounded memory before reaching a route.
     app.use(express.json({ limit: "1mb" }));
     app.use(requestIdMiddleware);
+    app.use(apiMetricsMiddleware);
     app.use(idempotencyMiddleware);
 
     app.use("/health", healthRouter);
