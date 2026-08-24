@@ -51,3 +51,33 @@ Rules:
 - Responses with HTTP status `500` or greater are not persisted, allowing a retry after a transient server failure.
 
 Production uses the configured durable storage backend, while tests use the in-memory backend. The storage abstraction is therefore shared by idempotency and application state rather than maintaining a separate process-local idempotency map.
+
+## Operational health
+
+Financia exposes three process-health endpoints:
+
+```http
+GET /health/live
+GET /health/ready
+GET /health/metrics
+```
+
+`/health/live` reports process liveness and remains available while the server drains connections during shutdown.
+
+`/health/ready` reports whether the process is accepting traffic and whether the configured storage backend can be read. It returns HTTP `503` with error code `SERVICE_NOT_READY` when the service is shutting down or storage is unavailable.
+
+`/health/metrics` is read-only and reports process-local request/response counts, server-error counts, status-code totals, process start time, and uptime. It does not include financial records or request bodies.
+
+## Graceful shutdown
+
+The server handles `SIGTERM` and `SIGINT` by first transitioning readiness to unavailable, then closing the HTTP server. Shutdown is bounded by `SHUTDOWN_TIMEOUT_MS`, defaulting to `10000` milliseconds. If the timeout is exceeded, the process exits with a failure status so an orchestrator can replace the instance.
+
+## Runtime configuration
+
+Supported runtime configuration is documented in `.env.example`:
+
+- `PORT` — HTTP port, default `3000`.
+- `SHUTDOWN_TIMEOUT_MS` — graceful shutdown limit, default `10000` milliseconds.
+- `FINANCIA_STORAGE_PATH` — durable JSON storage path, default `./data/financia.json`.
+
+The supported Node.js runtime is `>=22 <27`.
