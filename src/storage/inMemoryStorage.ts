@@ -83,6 +83,13 @@ export class InMemoryStorage implements Storage {
         return true;
     }
 
+    replaceAll<K extends keyof StorageCollections>(
+        collection: K,
+        values: StorageCollections[K][]
+    ): void {
+        this.collections[collection] = [...values];
+    }
+
     remove<K extends keyof StorageCollections>(
         collection: K,
         id: string
