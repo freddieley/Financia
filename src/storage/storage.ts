@@ -57,6 +57,11 @@ export interface Storage {
         value: StorageCollections[K]
     ): boolean;
 
+    replaceAll<K extends keyof StorageCollections>(
+        collection: K,
+        values: StorageCollections[K][]
+    ): void;
+
     remove<K extends keyof StorageCollections>(
         collection: K,
         id: string
