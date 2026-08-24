@@ -31,3 +31,5 @@ Use `/health/live` as the liveness probe. It is intentionally independent of sto
 ## Production boundary
 
 The container is a deployment baseline, not a complete production security boundary. Before exposing Financia to untrusted clients, the deployment still needs authenticated API access, TLS termination, secret management, network policy, backup/restore procedures, and a database-backed storage implementation for multi-instance operation.
+
+CI validates the same production image definition so container drift is caught before release.
