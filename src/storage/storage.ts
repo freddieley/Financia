@@ -17,6 +17,13 @@ import type {
     Intent
 } from "../types.ts";
 
+export type IdempotencyRecord = {
+    id: string;
+    fingerprint: string;
+    status: number;
+    body: unknown;
+};
+
 export type StorageCollections = {
     parties: Party;
     accounts: Account;
@@ -34,6 +41,7 @@ export type StorageCollections = {
     transactions: Transaction;
     settlements: Settlement;
     intents: Intent;
+    idempotency: IdempotencyRecord;
 };
 
 export interface Storage {
