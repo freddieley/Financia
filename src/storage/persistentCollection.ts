@@ -119,7 +119,7 @@ export function createPersistentCollection<K extends keyof StorageCollections>(
                 return (...args: unknown[]) => {
                     const mutation = Reflect.apply(
                         result,
-                        array,
+                        receiver,
                         args
                     );
                     sync();
@@ -127,7 +127,8 @@ export function createPersistentCollection<K extends keyof StorageCollections>(
                 };
             }
 
-            return result.bind(array);
+            return (...args: unknown[]) =>
+                Reflect.apply(result, receiver, args);
         },
         set(array, property, value, receiver) {
             const result = Reflect.set(array, property, value, receiver);
