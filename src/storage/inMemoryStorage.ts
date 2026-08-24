@@ -40,7 +40,8 @@ export class InMemoryStorage implements Storage {
         settlementInstructions: [],
         transactions: [],
         settlements: [],
-        intents: []
+        intents: [],
+        idempotency: []
     };
 
     list<K extends keyof StorageCollections>(
