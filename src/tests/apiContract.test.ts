@@ -134,4 +134,57 @@ describe("API contract", () => {
         expect(body.error.message).toBeTruthy();
         expect(body.error.requestId).toBeTruthy();
     });
+
+    it("returns a standard error for malformed JSON", async () => {
+        const response = await fetch(
+            `${baseUrl}/v1/transactions`,
+            {
+                method: "POST",
+                headers: {
+                    "content-type":
+                        "application/json"
+                },
+                body: "{not-json"
+            }
+        );
+
+        expect(response.status).toBe(400);
+
+        const body = await response.json();
+
+        expect(body.success).toBe(false);
+        expect(body.error.code).toBe("INVALID_JSON");
+        expect(body.error.requestId).toBeTruthy();
+        expect(
+            response.headers.get("x-request-id")
+        ).toBeTruthy();
+    });
+
+    it("rejects oversized JSON bodies with the standard error envelope", async () => {
+        const oversizedBody = JSON.stringify({
+            payload: "x".repeat(1024 * 1024 + 1)
+        });
+
+        const response = await fetch(
+            `${baseUrl}/v1/transactions`,
+            {
+                method: "POST",
+                headers: {
+                    "content-type":
+                        "application/json"
+                },
+                body: oversizedBody
+            }
+        );
+
+        expect(response.status).toBe(413);
+
+        const body = await response.json();
+
+        expect(body.success).toBe(false);
+        expect(body.error.code).toBe(
+            "REQUEST_BODY_TOO_LARGE"
+        );
+        expect(body.error.requestId).toBeTruthy();
+    });
 });
