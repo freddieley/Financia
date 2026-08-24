@@ -1,9 +1,13 @@
 import {
+    closeSync,
     copyFileSync,
     existsSync,
     mkdirSync,
+    openSync,
     readFileSync,
     renameSync,
+    statSync,
+    unlinkSync,
     writeFileSync
 } from "node:fs";
 import { dirname } from "node:path";
@@ -14,6 +18,9 @@ import type {
 } from "./storage.ts";
 
 const STORAGE_VERSION = 1;
+const LOCK_RETRY_MS = 10;
+const LOCK_TIMEOUT_MS = 5_000;
+const STALE_LOCK_MS = 30_000;
 
 const COLLECTIONS: (keyof StorageCollections)[] = [
     "parties",
@@ -82,6 +89,11 @@ function emptyState(): PersistedState {
         intents: [],
         idempotency: []
     };
+}
+
+function sleep(milliseconds: number): void {
+    const shared = new Int32Array(new SharedArrayBuffer(4));
+    Atomics.wait(shared, 0, 0, milliseconds);
 }
 
 export class JsonFileStorage implements Storage {
@@ -215,27 +227,80 @@ export class JsonFileStorage implements Storage {
         }
     }
 
+    private acquireLock(lockPath: string): number {
+        const startedAt = Date.now();
+
+        while (true) {
+            try {
+                return openSync(lockPath, "wx");
+            } catch (error) {
+                const code =
+                    error &&
+                    typeof error === "object" &&
+                    "code" in error
+                        ? error.code
+                        : undefined;
+
+                if (code !== "EEXIST") {
+                    throw error;
+                }
+
+                if (existsSync(lockPath)) {
+                    try {
+                        if (Date.now() - statSync(lockPath).mtimeMs > STALE_LOCK_MS) {
+                            unlinkSync(lockPath);
+                            continue;
+                        }
+                    } catch {
+                        // Another process may be creating/removing the lock.
+                    }
+                }
+
+                if (Date.now() - startedAt >= LOCK_TIMEOUT_MS) {
+                    throw new Error(
+                        `Timed out waiting for storage lock at ${lockPath}`
+                    );
+                }
+
+                sleep(LOCK_RETRY_MS);
+            }
+        }
+    }
+
     private persist(): void {
         const directory = dirname(this.filePath);
         mkdirSync(directory, { recursive: true });
 
         const temporaryPath = `${this.filePath}.tmp`;
         const backupPath = `${this.filePath}.bak`;
+        const lockPath = `${this.filePath}.lock`;
         const document: PersistedDocument = {
             version: STORAGE_VERSION,
             state: this.state
         };
         const contents = JSON.stringify(document, null, 2);
+        let lockHandle: number | undefined;
 
-        writeFileSync(temporaryPath, contents, "utf8");
+        try {
+            lockHandle = this.acquireLock(lockPath);
+            writeFileSync(temporaryPath, contents, "utf8");
 
-        // Preserve the last known-good document before replacing the live file.
-        // The live write remains atomic because readers only ever see either the
-        // old file or the completed temporary file after rename.
-        if (existsSync(this.filePath)) {
-            copyFileSync(this.filePath, backupPath);
+            // Preserve the last known-good document before replacing the live file.
+            if (existsSync(this.filePath)) {
+                copyFileSync(this.filePath, backupPath);
+            }
+
+            renameSync(temporaryPath, this.filePath);
+        } finally {
+            if (lockHandle !== undefined) {
+                closeSync(lockHandle);
+            }
+
+            try {
+                unlinkSync(lockPath);
+            } catch {
+                // The lock may already have been removed by a stale-lock recovery.
+            }
         }
-
-        renameSync(temporaryPath, this.filePath);
     }
 }
