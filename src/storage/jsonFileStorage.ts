@@ -22,7 +22,8 @@ const COLLECTIONS: (keyof StorageCollections)[] = [
     "settlementInstructions",
     "transactions",
     "settlements",
-    "intents"
+    "intents",
+    "idempotency"
 ];
 
 type PersistedState = {
@@ -64,7 +65,8 @@ function emptyState(): PersistedState {
         settlementInstructions: [],
         transactions: [],
         settlements: [],
-        intents: []
+        intents: [],
+        idempotency: []
     };
 }
 
